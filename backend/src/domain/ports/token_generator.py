@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class TokenGenerator(Protocol):
+    def generate(self, payload: dict) -> str: ...
+    def decode(self, token: str) -> dict: ...
