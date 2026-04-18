@@ -2,9 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from src.application.dtos.auth_dtos import LoginInput, RegisterInput
+from src.application.dtos.auth_dtos import LoginInput
 from src.application.use_cases.login_user import InvalidCredentialsError, LoginUser
-from src.application.use_cases.register_user import RegisterUser, UserAlreadyExistsError
 from src.infrastructure.auth.jwt_token_generator import InvalidTokenError
 from src.infrastructure.container import password_hasher, token_generator, user_repository
 
@@ -18,13 +17,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class RegisterRequest(BaseModel):
-    nombre: str
-    correo_electronico: str
-    password: str
-    organization_id: int
-
-
 class LoginResponse(BaseModel):
     access_token: str
     token_type: str
@@ -33,38 +25,11 @@ class LoginResponse(BaseModel):
     organization_id: int
 
 
-class RegisterResponse(BaseModel):
-    user_id: str
-    nombre: str
-    correo_electronico: str
-    organization_id: int
-
-
 class MeResponse(BaseModel):
     user_id: str
     nombre: str
     correo_electronico: str
     organization_id: int
-
-
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
-def register(req: RegisterRequest):
-    use_case = RegisterUser(user_repository, password_hasher)
-    try:
-        result = use_case.execute(RegisterInput(
-            nombre=req.nombre,
-            correo_electronico=req.correo_electronico,
-            password=req.password,
-            organization_id=req.organization_id,
-        ))
-    except UserAlreadyExistsError:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El correo ya está registrado")
-    return RegisterResponse(
-        user_id=result.user_id,
-        nombre=result.nombre,
-        correo_electronico=result.correo_electronico,
-        organization_id=result.organization_id,
-    )
 
 
 @router.post("/login", response_model=LoginResponse)
