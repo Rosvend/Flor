@@ -129,19 +129,20 @@ _Este documento es confidencial. Solo puede circular entre participantes activos
 La entidad aliada identificó tres funcionalidades que debería ofrecer la herramienta. Los equipos
 tienen libertad para proponer la arquitectura técnica y el alcance de cada componente, siempre
 que respondan a las causas raíz:
-**Componente A — Parametrización de competencias (base de conocimiento)**
+
+### **Componente A — Parametrización de competencias (base de conocimiento)**
 Construcción de una base de conocimiento estructurada con las funciones, alcances y
 competencias legales de cada una de las 26 dependencias de la Alcaldía de Medellín. Esta
 información es de carácter público y está disponible en los portales web institucionales. Es el
 insumo base que habilita la pre-clasificación automática. Sin esta parametrización, los demás
 componentes no tienen criterio sobre el cual operar.
-**Componente B — Pre-clasificación automática de PQRSDs**
+### **Componente B — Pre-clasificación automática de PQRSDs**
 A partir de la base de competencias, la herramienta debe ser capaz de leer el contenido de una
 PQRSD entrante y determinar a cuál dependencia de la Alcaldía corresponde, y —en el caso de
 PQRSDs dirigidas a la Secretaría de Desarrollo Económico— a cuál subsecretaría interna debe
 ser remitida. El término correcto es pre-clasificación: la herramienta propone, el funcionario
 valida. Esto ataca directamente la Causa 1.
-**Componente C — Síntesis y resumen estructurado**
+### **Componente C — Síntesis y resumen estructurado**
 La herramienta debe generar un resumen ejecutivo de cada PQRSD que facilite la revisión por
 parte del enlace y del Asesor Jurídico. La entidad planteó una estructura de al menos tres
 capas: (1) un lead o encabezado con la solicitud concreta identificada, (2) una discriminación
