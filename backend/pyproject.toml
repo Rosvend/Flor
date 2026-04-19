@@ -21,6 +21,9 @@ dependencies = [
     "langchain-text-splitters==0.3.8",
     "chromadb==0.5.23",
     "sentence-transformers==3.3.1",
+
+    # Datalake (S3 raw storage)
+    "boto3==1.38.0",
 ]
 
 [build-system]
@@ -32,3 +35,12 @@ packages = ["src"]
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
