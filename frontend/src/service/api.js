@@ -314,6 +314,62 @@ export const pqrsService = {
     }
 }
 
+// ─── PQRS Tracking Service (Consulta Ciudadana) ───────────────────
+export const pqrsTrackingService = {
+    /**
+     * Validates if a radicado exists before navigating to detail view.
+     *
+     * Backend contract suggestion:
+     * GET /pqrs/tracking/{radicado}/exists
+     * -> { exists: boolean, message?: string }
+     *
+     * @param {string} radicado
+     * @returns {Promise<{exists: boolean, message?: string}>}
+     */
+    async checkExists(radicado) {
+        if (USE_MOCK) {
+            return await mockPqrs.checkExistsByRadicado(radicado);
+        }
+
+        return await request(`/pqrs/tracking/${encodeURIComponent(radicado)}/exists`, {
+            method: 'GET',
+        });
+    },
+
+    /**
+     * Retrieves citizen-visible PQRS detail + status progression + optional response.
+     *
+     * Backend contract suggestion:
+     * GET /pqrs/tracking/{radicado}
+     *
+     * Expected response shape:
+     * {
+     *   radicado: string,
+     *   status: 'RADICADA' | 'EN_CLASIFICACION' | 'EN_GESTION' | 'EN_REVISION_JURIDICA' | 'RESPONDIDA' | 'CERRADA' | 'VENCIDA',
+     *   type: string,
+     *   subject: string,
+     *   description: string,
+     *   created_at: string,
+     *   channel?: string,
+     *   assigned_to?: string,
+     *   attachments?: { name: string }[],
+     *   response?: { message: string, responded_at?: string } | null,
+     * }
+     *
+     * @param {string} radicado
+     * @returns {Promise<Object>}
+     */
+    async getByRadicado(radicado) {
+        if (USE_MOCK) {
+            return await mockPqrs.getByRadicado(radicado);
+        }
+
+        return await request(`/pqrs/tracking/${encodeURIComponent(radicado)}`, {
+            method: 'GET',
+        });
+    },
+}
+
 // ─── Chatbot Flor Service (F7) ─────────────────────────────────
 
 export const chatbotService = {

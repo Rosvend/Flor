@@ -1,5 +1,4 @@
 import './navbar.css';
-import { storage } from '../../service/storage.js';
 import alcaldiaLogo from '../../../assets/alcaldialogo.png';
 
 function activeClass(isActive) {
@@ -12,14 +11,9 @@ export function renderNavbar(options = {}) {
 
     const homeLinkClass = activeClass(currentPath === '/');
     const pqrsLinkClass = activeClass(currentPath === '/pqrs');
-    const adminLinkClass = activeClass(currentPath === '/admin/knowledge-base');
 
     const ctaHref = isLogin ? '/' : '/login';
     const ctaText = isLogin ? 'Volver al inicio' : 'Iniciar Sesion';
-
-    const adminLink = storage.isAuthenticated()
-        ? `<a href="/admin/knowledge-base" class="${adminLinkClass}" data-link>Base de conocimiento</a>`
-        : '';
 
     return `
         <div class="topbar-gov">
@@ -33,14 +27,13 @@ export function renderNavbar(options = {}) {
         </div>
         <nav class="navbar" role="navigation" aria-label="Navegacion principal">
             <a href="/" class="navbar__brand" data-link>
-                <span class="navbar__brand-text">Flor te escucha</span>
+                <span class="navbar__brand-text"><span class="navbar__brand-flor">Flor</span> te escucha</span>
                 <img src="${alcaldiaLogo}" alt="Alcaldía de Medellín" class="navbar__alcaldia-logo">
             </a>
 
             <div class="navbar__center-links">
                 <a href="/" class="${homeLinkClass}" data-link>Inicio</a>
                 <a href="/pqrs" class="${pqrsLinkClass}" data-link>Radicar PQR</a>
-                ${adminLink}
             </div>
 
             <a href="${ctaHref}" class="btn btn--accent btn--sm navbar__cta" data-link>${ctaText}</a>

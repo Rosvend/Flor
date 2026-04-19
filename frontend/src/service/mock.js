@@ -1,4 +1,4 @@
-export const USE_MOCK = false;
+export const USE_MOCK = true;
 
 // Simulador de retraso de red
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -60,6 +60,24 @@ export const mockPqrs = {
                 { name: 'foto.jpg', url: 'https://example.com/foto.jpg' }
             ]
         };
+    },
+    async checkExistsByRadicado(radicado) {
+        await delay(400);
+        const normalized = String(radicado || '').trim().toUpperCase();
+        const found = TRACKING_MOCK_DB.find((item) => item.radicado === normalized);
+        if (!found) {
+            throw new Error('No encontramos una PQR con ese número de radicado.');
+        }
+        return { exists: true };
+    },
+    async getByRadicado(radicado) {
+        await delay(650);
+        const normalized = String(radicado || '').trim().toUpperCase();
+        const found = TRACKING_MOCK_DB.find((item) => item.radicado === normalized);
+        if (!found) {
+            throw new Error('El radicado consultado no existe o no está disponible para consulta pública.');
+        }
+        return found;
     }
 };
 
@@ -78,3 +96,36 @@ export const mockChatbot = {
         };
     }
 };
+
+const TRACKING_MOCK_DB = [
+    {
+        radicado: 'RAD-2026-123456',
+        status: 'EN_GESTION',
+        type: 'Petición',
+        subject: 'Solicitud de información sobre programas de empleo juvenil',
+        description: 'Solicito información sobre convocatorias abiertas de empleo y formación para jóvenes entre 18 y 28 años en Medellín.',
+        created_at: '2026-04-10 09:35',
+        channel: 'PORTAL',
+        assigned_to: 'Secretaría de Desarrollo Económico',
+        attachments: [
+            { name: 'cedula.pdf' },
+            { name: 'certificado_residencia.pdf' },
+        ],
+        response: null,
+    },
+    {
+        radicado: 'RAD-2026-987654',
+        status: 'RESPONDIDA',
+        type: 'Reclamo',
+        subject: 'Retraso en respuesta de trámite empresarial',
+        description: 'Presento reclamo por retraso en la respuesta de mi trámite de fortalecimiento empresarial radicado anteriormente.',
+        created_at: '2026-03-18 14:02',
+        channel: 'WHATSAPP',
+        assigned_to: 'Subsecretaría de Creación y Fortalecimiento Empresarial',
+        attachments: [],
+        response: {
+            message: 'Se revisó su caso y se confirmó que el trámite quedó actualizado. A partir del 22 de abril puede continuar con la siguiente fase en ventanilla virtual.',
+            responded_at: '2026-03-29 11:20',
+        },
+    },
+];

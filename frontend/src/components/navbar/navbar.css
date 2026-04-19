@@ -57,6 +57,10 @@
     line-height: 1;
 }
 
+.navbar__brand-flor {
+    color: #0b2e59;
+}
+
 .navbar__alcaldia-logo {
     height: 32px;
     width: auto;

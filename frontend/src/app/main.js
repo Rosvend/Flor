@@ -1,4 +1,5 @@
 import { router } from './router.js'
+import '../components/navbar/navbar.css'
 import { renderA11yWidget } from '../components/a11y-widget/a11y-widget.js'
 
 document.addEventListener('DOMContentLoaded', () => {

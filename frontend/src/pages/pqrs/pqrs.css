@@ -3,13 +3,13 @@
    ========================================= */
 
 .pqrs-main {
-    padding-top: var(--space-6);
+    padding-top: calc(var(--space-16) + var(--space-4));
     padding-bottom: var(--space-10);
 }
 
 .pqrs-container {
     max-width: 900px;
-    margin: 0 auto;
+    margin: var(--space-4) auto 0;
 }
 
 .pqrs-card {
