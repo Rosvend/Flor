@@ -1,0 +1,29 @@
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Never bake the local venvs into the image — the container has its own.
+backend/.venv
+
+# Never bake secrets into the image — pass env vars at runtime.
+.env
+**/.env
+**/.env.local
+
+# Frontend is deployed separately on Vercel; don't ship it in the backend image.
+frontend/
+
+# Local Chroma index + uploads; volume-mount these instead.
+backend/.knowledge_base/chroma
+backend/.knowledge_base/uploads
+
+# Developer tooling + repo metadata that isn't needed at runtime.
+.git
+.github
+.claude
+.vscode
+.idea
+**/*.md
+!docs/knowledge_base/*.md

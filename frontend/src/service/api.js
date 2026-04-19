@@ -1,6 +1,9 @@
 import { storage } from './storage.js'
 
-export const BASE_URL = 'http://127.0.0.1:8000/api/v1'
+// Vite injects VITE_* env vars at build time. In dev this is undefined and we
+// fall back to the local uvicorn. On Vercel, set VITE_API_BASE_URL on the
+// project (e.g. https://<your-railway-app>.up.railway.app/api/v1).
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1'
 export const AUTH_CHANGED_EVENT = 'auth-changed'
 export const AUTH_EXPIRED_EVENT = 'auth-expired'
 export const AUTH_FORBIDDEN_EVENT = 'auth-forbidden' // Evento para manejar acceso denegado por roles
