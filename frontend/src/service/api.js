@@ -3,7 +3,7 @@ import { USE_MOCK, mockAuth, mockPqrs, mockChatbot } from './mock.js'
 
 export const BASE_URL = 'http://127.0.0.1:8000/api/v1'
 export const AUTH_CHANGED_EVENT = 'auth-changed'
-export const AUTH_EXPIRED_EVENT = 'auth-expired' 
+export const AUTH_EXPIRED_EVENT = 'auth-expired'
 export const AUTH_FORBIDDEN_EVENT = 'auth-forbidden' // Evento para manejar acceso denegado por roles
 
 // ─── Clases de Errores Específicos ──────────────────────────────
@@ -61,7 +61,7 @@ async function refreshAccessToken() {
         if (!response.ok) return false
 
         const tokenData = await response.json()
-        const newAccessToken  = tokenData.access_token  || tokenData.accessToken  || tokenData
+        const newAccessToken = tokenData.access_token || tokenData.accessToken || tokenData
         const newRefreshToken = tokenData.refresh_token || tokenData.refreshToken || refreshToken
         storage.setTokens(newAccessToken, newRefreshToken)
         return true
@@ -160,15 +160,15 @@ export async function request(endpoint, options = {}) {
                     refreshPromise = null;
                 });
             }
-            
+
             const refreshed = await refreshPromise;
-            
+
             if (refreshed) {
                 // Reintento de la petición original pasandole bandera de Retry
                 return request(endpoint, { ...options, _isRetry: true });
             }
         }
-        
+
         // 6. Centralizar Redirects usando Eventos
         storage.clear();
         emitAuthChanged();
@@ -286,6 +286,17 @@ export const authService = {
     },
 }
 
+// ─── Aplicacion Service ──────────────────────────────────────────────
+
+export const aplicacionService = {
+    async getAplicaciones() {
+        return await request('/aplicaciones', { method: 'GET', requiresAuth: true });
+    },
+    async createAplicacion(data) {
+        return await request('/aplicaciones', { method: 'POST', data, requiresAuth: true });
+    }
+};
+
 // ─── PQRS Service ──────────────────────────────────────────────
 
 export const pqrsService = {
@@ -336,3 +347,34 @@ export const chatbotService = {
         })
     },
 }
+
+// ─── Aplicación Dashboard & PQRS Services ────────────────────────
+export const dashboardService = {
+    async getStats() {
+        if (USE_MOCK) {
+            // Simulated numbers for MVP
+            return Promise.resolve({ active: 5, pending: 2 });
+        }
+        return request('/pqrs/dashboard', { method: 'GET', requiresAuth: true });
+    }
+};
+
+export const pqrsListService = {
+    async listActive() {
+        if (USE_MOCK) {
+            return mockPqrs.listActive();
+        }
+        return request('/pqrs/active', { method: 'GET', requiresAuth: true });
+    },
+    async getDetail(id) {
+        if (USE_MOCK) {
+            return mockPqrs.getDetail(id);
+        }
+        return request(`/pqrs/${id}`, { method: 'GET', requiresAuth: true });
+    }
+};
+
+// Exported helpers used by aplicacion page
+export const getDashboardData = dashboardService.getStats;
+export const getActivePqrs = pqrsListService.listActive;
+export const getPqrDetails = pqrsListService.getDetail;
