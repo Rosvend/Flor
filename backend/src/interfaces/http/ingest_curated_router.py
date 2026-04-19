@@ -1,50 +1,14 @@
-import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from pydantic import BaseModel
+
+from fastapi import Body
 
 from src.application.dtos.ingest_curated_dtos import IngestCuratedMessagesInput
-from src.application.dtos.pqrs_dtos import ProcessPQRSInput
 from src.infrastructure import container
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
-
-
-class CuratedCiudadano(BaseModel):
-    tipo_persona: str                    # natural | juridica
-    tipo_documento: str                  # cedula_ciudadania | cedula_extranjeria | tarjeta_identidad | pasaporte | nit
-    numero_documento: str
-    nombres: str
-    apellidos: str
-    genero: str                          # masculino | femenino | no_binario | prefiero_no_decirlo | otro
-    pais: str = "Colombia"
-    departamento: str
-    ciudad: str
-    direccion: str | None = None
-    correo_electronico: str | None = None
-    telefono: str | None = None
-    id_meta: str | None = None           # presente si viene de canal Meta
-
-
-class CuratedMetadata(BaseModel):
-    post_id: str | None = None
-    created_time: str | None = None
-
-
-class CuratedRecord(BaseModel):
-    radicado: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp_radicacion: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
-    canal: str
-    anonima: bool
-    ciudadano: CuratedCiudadano
-    asunto_principal: str                # peticion | queja | reclamo | solicitud | denuncia
-    atencion_preferencial: str = "ninguna"  # ninguna | adulto_mayor | persona_con_discapacidad | mujer_embarazada | victima_conflicto | otro
-    autoriza_notificacion_correo: bool
-    descripcion_detallada: str
-    metadata: CuratedMetadata = Field(default_factory=CuratedMetadata)
 
 
 class IngestCuratedResponse(BaseModel):
@@ -52,45 +16,72 @@ class IngestCuratedResponse(BaseModel):
     stored_keys: list[str]
 
 
-def analyze_and_update_records(keys: list[str], records: list[dict]):
-    """Background task to run the heavy AI process on each new record."""
+def _ai_and_notify(keys: list[str], records: list[dict]) -> None:
     try:
         process_pqrs = container.get_process_pqrs()
         for key, record in zip(keys, records):
             texto = record.get("descripcion_detallada", "")
             if len(texto) > 5:
+                from src.application.dtos.pqrs_dtos import ProcessPQRSInput
                 analisis = process_pqrs.execute(ProcessPQRSInput(text=texto))
                 record["analisis_ia"] = {
-                    "sentimiento": analisis.sentiment,
-                    "is_offensive": analisis.is_offensive,
-                    "toxicity_warning": analisis.toxicity_warning,
-                    "offensive_words": analisis.offensive_words,
-                    "tipo_sugerido": analisis.tipo_sugerido,
+                    "sentimiento":        analisis.sentiment,
+                    "is_offensive":       analisis.is_offensive,
+                    "toxicity_warning":   analisis.toxicity_warning,
+                    "offensive_words":    analisis.offensive_words,
+                    "tipo_sugerido":      analisis.tipo_sugerido,
                     "secretaria_asignada": analisis.secretaria_asignada,
-                    "texto_mejorado": analisis.improved_text
+                    "texto_mejorado":     analisis.improved_text,
                 }
-                # Actualizamos el archivo en S3 con los nuevos datos de IA
-                container.curated_data_lake.update(key, record)
-    except Exception as e:
-        print(f"Error en análisis en segundo plano: {e}")
+                container.curated_data_lake.update_by_radicado(record["radicado"], record)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error("Error en análisis IA background: %s", exc)
 
 
 @router.post("/curated", response_model=IngestCuratedResponse, status_code=201)
-def ingest_curated(records: list[CuratedRecord], background_tasks: BackgroundTasks) -> IngestCuratedResponse:
+def ingest_curated(
+    records: list[dict] = Body(...),
+    background_tasks: BackgroundTasks = None,
+) -> IngestCuratedResponse:
     """
-    Receives curated records with the unified data-lake schema and stores them in S3.
-    Generates radicado and timestamp_radicacion if not provided.
-    Automatically triggers a background task to process the records with IA.
+    Receives curated PQRSDs in the unified format and stores them in S3.
+    Generates radicado (RAD-YYYYMMDD-XXXXXXXX) and timestamp if missing.
+    Auto-assigns estado=abierto.
     """
     if not records:
         raise HTTPException(status_code=422, detail="records list is empty")
 
-    record_dicts = [r.model_dump() for r in records]
+    now = datetime.now(timezone.utc).isoformat()
+    record_dicts: list[dict] = []
+
+    for r in records:
+        if not r.get("radicado"):
+            r["radicado"] = container.curated_data_lake.next_radicado()
+        if not r.get("timestamp_radicacion"):
+            r["timestamp_radicacion"] = now
+        if not r.get("estado"):
+            r["estado"] = "abierto"
+        if "respuesta" not in r:
+            r["respuesta"] = None
+        record_dicts.append(r)
+
     result = container.ingest_curated_messages.execute(
         IngestCuratedMessagesInput(records=record_dicts)
     )
-    
-    # Encolar análisis de IA para no bloquear al usuario
-    background_tasks.add_task(analyze_and_update_records, result.stored_keys, record_dicts)
-    
+
+    # Background: AI analysis + email notification on creation
+    background_tasks.add_task(_ai_and_notify, result.stored_keys, record_dicts)
+    background_tasks.add_task(_notify_created_batch, record_dicts)
+
     return IngestCuratedResponse(count=result.count, stored_keys=result.stored_keys)
+
+
+def _notify_created_batch(records: list[dict]) -> None:
+    try:
+        for record in records:
+            if not record.get("anonima"):
+                container.notifier.notify_created(record)
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).error("Error en notificación de creación: %s", exc)

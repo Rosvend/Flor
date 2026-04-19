@@ -19,7 +19,7 @@ import { TIPO_PQRS } from '../../service/pqrs-mock.js';
 function formatFecha(iso) {
     if (!iso) return 'N/A';
     const d = new Date(iso);
-    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
     return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -55,8 +55,8 @@ function buildDetailHTML(pqr) {
     const tipoLabel = getTipoLabel(pqr.tipo);
     const canalLabel = pqr.canal === 'WEB' ? 'Canal Web'
         : pqr.canal === 'PRESENCIAL' ? 'Presencial'
-        : pqr.canal === 'APP' ? 'App Móvil'
-        : 'Facebook/Meta';
+            : pqr.canal === 'APP' ? 'App Móvil'
+                : 'Facebook/Meta';
 
     const analisis = pqr.analisis_ia || {};
     const resumenIA = pqr.resumen_ia || null; // F5 summary
@@ -68,13 +68,9 @@ function buildDetailHTML(pqr) {
     // F5 summary takes precedence over the older classification `analisis_ia` for the
     // first two layers; we fall back to the older fields so existing records still render.
     const capas = {
-        solicitudConcreta: resumenIA?.lead
-            || analisis.texto_mejorado
-            || 'Aún no se ha generado el resumen. Usa "Generar resumen" abajo.',
-        tematicas: (resumenIA?.topics && resumenIA.topics.length)
-            ? resumenIA.topics
-            : (analisis.tipo_sugerido ? [analisis.tipo_sugerido, analisis.secretaria_asignada].filter(Boolean) : ['General']),
-        textoOriginal: originalText || '(sin texto)'
+        solicitudConcreta: analisis.texto_mejorado || 'Pendiente de análisis...',
+        tematicas: analisis.tipo_sugerido ? [analisis.tipo_sugerido, analisis.secretaria_asignada] : ['General'],
+        textoOriginal: pqr.contenido || pqr.descripcion_detallada
     };
 
     const tematicasHTML = capas.tematicas
@@ -332,7 +328,7 @@ export async function renderPqrDetail(containerEl, pqrId) {
                         Sugerencia basada en ${draftData.similitud}% de similitud temática.
                     </p>
                 `;
-                
+
                 // Rebind event
                 document.getElementById('btn-ver-respuesta')?.addEventListener('click', () => {
                     const textarea = document.getElementById('pqr-response-textarea');

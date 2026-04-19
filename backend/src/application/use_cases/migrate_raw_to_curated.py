@@ -63,22 +63,34 @@ class MigrateRawToCurated:
                 tipo = classification_result.tipo
                 
                 # Construir el diccionario validado para IngestCuratedMessages
+                raw_user = raw_record.get("usuario", {})
+                tipo_map = {"peticion": "peticion", "queja": "queja", "reclamo": "reclamo",
+                            "solicitud": "solicitud", "denuncia": "denuncia"}
+                asunto = tipo_map.get((tipo or "").lower(), "peticion")
+
                 curated_dict = {
-                    "radicado": str(uuid.uuid4()),
-                    "timestamp_radicacion": datetime.now(timezone.utc).isoformat(),
-                    "tipo": tipo.upper() if tipo else "Petición",
-                    "canal": raw_record.get("canal", "META_DM"),
-                    "anonima": raw_record.get("anonima", False),
-                    "usuario": usuario,
-                    "contenido": contenido,
-                    "secretaria_asignada": classification_result.suggested_department if classification_result.confidence_score >= 0.75 else None,
-                    "subsecretaria_sugerida": classification_result.suggested_subsecretaria if classification_result.confidence_score >= 0.75 else None,
-                    "prioridad": classification_result.priority,
-                    "confidence_score": classification_result.confidence_score,
+                    "radicado":                    None,  # assigned by data lake
+                    "timestamp_radicacion":        datetime.now(timezone.utc).isoformat(),
+                    "canal":                       raw_record.get("canal", "META_DM"),
+                    "estado":                      "abierto",
+                    "anonima":                     True,  # raw social media: always anonymous
+                    "ciudadano": {
+                        "pais":               "Colombia",
+                        "departamento":       None,
+                        "ciudad":             None,
+                        "direccion":          None,
+                        "correo_electronico": None,
+                        "telefono":           raw_user.get("telefono"),
+                        "id_meta":            raw_user.get("id_meta") or raw_user.get("id"),
+                    },
+                    "asunto_principal":            asunto,
+                    "atencion_preferencial":       "ninguna",
+                    "autoriza_notificacion_correo": False,
+                    "descripcion_detallada":       contenido,
                     "metadata": {
-                        "post_id": raw_metadata.get("post_id"),
-                        "created_time": raw_metadata.get("created_time")
-                    }
+                        "post_id":      raw_metadata.get("post_id"),
+                        "created_time": raw_metadata.get("created_time"),
+                    },
                 }
                 curated_records_to_insert.append(curated_dict)
                 migrated_keys.append(key)

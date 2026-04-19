@@ -61,7 +61,7 @@ function renderItem(pqr, isActive) {
     const tipoLabel = pqrTipo.charAt(0).toUpperCase() + pqrTipo.slice(1).toLowerCase();
     
     // Asunto: Usamos el texto mejorado de IA o los primeros 60 caracteres del contenido
-    const contenidoStr = pqr.contenido || 'Sin contenido detallado';
+    const contenidoStr = pqr.contenido || pqr.descripcion_detallada || 'Sin contenido detallado';
     const asunto = pqr.analisis_ia?.texto_mejorado || contenidoStr.substring(0, 60) + '...';
     const confianza = pqr.analisis_ia ? 99 : 0; // Placeholder confianza
 

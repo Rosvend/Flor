@@ -81,6 +81,19 @@ else:
 ingest_raw_messages = IngestRawMessages(data_lake=raw_data_lake)
 ingest_curated_messages = IngestCuratedMessages(data_lake=curated_data_lake)
 
+# ── Notificaciones (Gmail SMTP o no-op fallback) ─────────────────────────────
+if os.getenv("SMTP_HOST") and os.getenv("SMTP_USER") and os.getenv("SMTP_PASSWORD"):
+    from src.infrastructure.notifications.gmail_smtp_adapter import GmailSMTPAdapter
+    notifier = GmailSMTPAdapter()
+    logger.info("Notificaciones via Gmail SMTP activadas.")
+else:
+    from src.domain.ports.notification_port import NotificationPort
+    class _NoOpNotifier(NotificationPort):
+        def notify_created(self, record: dict) -> None: pass
+        def notify_resolved(self, record: dict) -> None: pass
+    notifier = _NoOpNotifier()
+    logger.warning("SMTP_HOST/SMTP_USER/SMTP_PASSWORD no configurados — notificaciones desactivadas.")
+
 # ── PQRS Analysis ────────────────────────────────────────────────────────────
 from src.infrastructure.analysis.toxicity_detector import RegexToxicityDetector
 from src.infrastructure.analysis.similarity_analyzer import TfidfSimilarityAnalyzer

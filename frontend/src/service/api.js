@@ -380,10 +380,10 @@ export const pqrsListService = {
         });
     },
     async sendResponse(id, texto) {
-        return request(`/pqrs/curated/${id}`, {
-            method: 'PATCH',
+        return request(`/pqrs/curated/${id}/responder`, {
+            method: 'POST',
             requiresAuth: true,
-            data: { respuesta_funcionario: texto, estado: 'CERRADO' }
+            data: { respuesta: texto }
         });
     },
     async getDraft(id) {

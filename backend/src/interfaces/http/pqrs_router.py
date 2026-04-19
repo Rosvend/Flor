@@ -1,46 +1,49 @@
-from fastapi import APIRouter, Body, HTTPException, Depends, Form, File, UploadFile, BackgroundTasks, status
-from pydantic import BaseModel
-from typing import Optional
-import uuid
+import logging
 from datetime import datetime, timezone
+from typing import Optional
 
-from src.application.dtos.pqrs_dtos import ProcessPQRSInput
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, UploadFile
+from pydantic import BaseModel
+
 from src.application.dtos.ingest_curated_dtos import IngestCuratedMessagesInput
-from src.application.dtos.pqrsd_assist_dtos import (
-    DraftResponseInput,
-    SummarizePQRSDInput,
-)
+from src.application.dtos.pqrs_dtos import ProcessPQRSInput
+from src.domain.entities.user import User
 from src.infrastructure import container
 from src.interfaces.http.deps import get_current_user
-from src.domain.entities.user import User
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/pqrs", tags=["pqrs"])
 
 
 # ── Background Task: AI Analysis ────────────────────────────────────────────
 
-def _analyze_pqr_background(keys: list[str], records: list[dict]):
-    """Runs heavy AI processing after the response is sent to the citizen."""
+def _analyze_pqr_background(keys: list[str], records: list[dict]) -> None:
     try:
         process_pqrs = container.get_process_pqrs()
-        for key, record in zip(keys, records):
-            texto = record.get("contenido", "")
+        for record in records:
+            texto = record.get("descripcion_detallada", "")
             if len(texto) > 5:
                 analisis = process_pqrs.execute(ProcessPQRSInput(text=texto))
                 record["analisis_ia"] = {
-                    "sentimiento": analisis.sentiment,
-                    "is_offensive": analisis.is_offensive,
-                    "toxicity_warning": analisis.toxicity_warning,
-                    "offensive_words": analisis.offensive_words,
-                    "tipo_sugerido": analisis.tipo_sugerido,
+                    "sentimiento":        analisis.sentiment,
+                    "is_offensive":       analisis.is_offensive,
+                    "toxicity_warning":   analisis.toxicity_warning,
+                    "offensive_words":    analisis.offensive_words,
+                    "tipo_sugerido":      analisis.tipo_sugerido,
                     "secretaria_asignada": analisis.secretaria_asignada,
-                    "texto_mejorado": analisis.improved_text,
+                    "texto_mejorado":     analisis.improved_text,
                 }
-                record["estado"] = "PENDIENTE"
-                container.curated_data_lake.update(key, record)
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Error en analisis IA background: {e}")
+                container.curated_data_lake.update_by_radicado(record["radicado"], record)
+    except Exception as exc:
+        logger.error("Error en análisis IA background: %s", exc)
+
+
+def _notify_created(record: dict) -> None:
+    try:
+        if not record.get("anonima"):
+            container.notifier.notify_created(record)
+    except Exception as exc:
+        logger.error("Error en notificación de creación: %s", exc)
 
 
 # ── Citizen Form Submission ─────────────────────────────────────────────────
@@ -79,62 +82,64 @@ async def submit_pqrs(
     # Toggle de anexos
     tiene_anexos: Optional[str] = Form("No"),
     is_anonimo: Optional[str] = Form(None),
+    organization_id: int = Form(1),
 ):
-    import time, logging
-    t0 = time.time()
-    logging.getLogger(__name__).info(">>> [submit_pqrs] START request handling")
-    
     """
-    Endpoint publico para que el ciudadano radique una PQRS desde el formulario web.
-    Recibe FormData, genera radicado, almacena en S3 curated, y dispara analisis IA.
+    Endpoint público — ciudadano radica PQRS desde el formulario web.
+    Produce el schema canónico y lo almacena en S3 curated.
     """
+    es_anon = (es_anonimo or "false").lower() == "true" or (is_anonimo or "false").lower() == "true"
+    now     = datetime.now(timezone.utc).isoformat()
+    import uuid
     radicado = f"RAD-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}"
-    es_anon = es_anonimo.lower() == "true" or (is_anonimo and is_anonimo.lower() == "true")
+
+    ciudadano: dict = {
+        "pais":               pais,
+        "departamento":       departamento,
+        "ciudad":             ciudad,
+        "direccion":          direccion,
+        "correo_electronico": email if not es_anon else None,
+        "telefono":           telefono,
+        "id_meta":            None,
+    }
+    if not es_anon:
+        ciudadano.update({
+            "tipo_persona":     persona,
+            "tipo_documento":   tipo_documento,
+            "numero_documento": numero_documento,
+            "nombres":          nombres,
+            "apellidos":        None,
+            "genero":           genero,
+        })
 
     curated_record = {
-        "radicado": radicado,
-        "timestamp_radicacion": datetime.now(timezone.utc).isoformat(),
-        "tipo": asunto,
-        "canal": "WEB",
-        "anonima": es_anon,
-        "estado": "NUEVO",
-        "organization_id": 1,  # Default org for citizen submissions
-        "usuario": {
-            "nombre": nombres if not es_anon else "Anonimo",
-            "documento": f"{tipo_documento} {numero_documento}" if not es_anon and tipo_documento else None,
-            "telefono": telefono,
-            "email": email,
-        },
-        "ubicacion": {
-            "pais": pais,
-            "departamento": departamento,
-            "ciudad": ciudad,
-            "direccion": direccion,
-            "direccion_hecho": otra_direccion if direccion_hecho_tipo == "Otra" else direccion,
-        },
-        "contenido": descripcion,
-        "metadata": {
-            "persona": persona,
-            "genero": genero,
-            "atencion_preferencial": atencion_preferencial,
-            "es_solicitud_informacion": es_solicitud_informacion,
-            "autoriza_notificacion": autoriza_notificacion,
-        },
+        "radicado":                    radicado,
+        "timestamp_radicacion":        now,
+        "tipo":                        asunto,
+        "canal":                       "PORTAL",
+        "estado":                      "abierto",
+        "organization_id":             organization_id,
+        "anonima":                     es_anon,
+        "ciudadano":                   ciudadano,
+        "asunto_principal":            asunto.lower(),
+        "atencion_preferencial":       atencion_preferencial.lower(),
+        "autoriza_notificacion_correo": autoriza_notificacion.lower() in ("si", "sí", "true", "yes"),
+        "contenido":                   descripcion,
+        "descripcion_detallada":       descripcion,
+        "respuesta":                   None,
+        "metadata":                    {"post_id": None, "created_time": now},
     }
 
-    # Store in S3 curated data lake
     try:
         result = container.ingest_curated_messages.execute(
             IngestCuratedMessagesInput(records=[curated_record])
         )
-        stored_keys = result.stored_keys
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al almacenar la PQRS: {str(e)}")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al almacenar la PQRS: {exc}")
 
-    # Trigger AI analysis in background (non-blocking)
-    background_tasks.add_task(_analyze_pqr_background, stored_keys, [curated_record])
+    background_tasks.add_task(_analyze_pqr_background, result.stored_keys, [curated_record])
+    background_tasks.add_task(_notify_created, curated_record)
 
-    logging.getLogger(__name__).info(f"<<< [submit_pqrs] END request handling in {time.time() - t0:.3f}s")
     return {"radicado": radicado, "message": "Su PQRS ha sido radicada exitosamente."}
 
 
@@ -292,7 +297,7 @@ def get_pqrs_stats(current_user: User = Depends(get_current_user)):
         by_sentiment = {"POSITIVO": 0, "NEUTRAL": 0, "NEGATIVO": 0}
         
         for p in filtered:
-            if p.get("estado") != "CERRADO":
+            if p.get("estado") != "respondido":
                 pendientes += 1
                 rad_date_str = p.get("timestamp_radicacion")
                 if rad_date_str:
@@ -334,148 +339,53 @@ def update_curated_pqr(
     updates: dict = Body(...),
     current_user: User = Depends(get_current_user),
 ):
-    """Updates fields of a curated PQR."""
-    existing = container.curated_data_lake.get_by_radicado(radicado)
-    if not existing:
-        raise HTTPException(status_code=404, detail=f"PQR {radicado} no encontrada.")
-    if existing.get("organization_id", 1) != current_user.organization_id:
-        raise HTTPException(status_code=403, detail="No tienes permiso para modificar esta PQR.")
-
-    merged = container.curated_data_lake.update_by_radicado(radicado, updates)
-    if merged is None:
-        raise HTTPException(status_code=404, detail=f"PQR {radicado} no encontrada al actualizar.")
-    return merged
-
-
-# ── F5: AI-assisted summary + RAG-based draft response ─────────────────────
-#
-# Both endpoints require an authenticated agent. They read the curated PQR by
-# radicado, run the LLM, persist the output back onto the record (via
-# update_by_radicado) so the detail page can show it without re-running the
-# model on every refresh, and return the fresh record.
-
-def _pick_pqr_text(pqr: dict) -> str:
-    """The curated record uses `contenido` from the ingest endpoint and
-    `descripcion_detallada` from the seed script. Accept either."""
-    return (
-        pqr.get("contenido")
-        or pqr.get("descripcion_detallada")
-        or ""
-    )
-
-
-def _citizen_display_name(pqr: dict) -> str | None:
-    ciudadano = pqr.get("ciudadano") or {}
-    if pqr.get("anonima"):
-        return None
-    nombres = (ciudadano.get("nombres") or "").strip()
-    apellidos = (ciudadano.get("apellidos") or "").strip()
-    full = f"{nombres} {apellidos}".strip()
-    return full or None
-
-
-@router.post("/curated/{radicado}/summarize")
-def summarize_curated_pqr(
-    radicado: str,
-    force: bool = False,
-    current_user: User = Depends(get_current_user),
-):
-    """Generate the 3-layer F5 summary and persist it under `resumen_ia`."""
-    if container.summarize_pqrsd is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="El resumen IA no está configurado (falta GEMINI_API_KEY).",
-        )
-
+    """Generic field update for a curated PQRSD (internal use)."""
     pqr = container.curated_data_lake.get_by_radicado(radicado)
     if not pqr:
-        raise HTTPException(status_code=404, detail=f"PQR {radicado} no encontrada.")
-    if pqr.get("organization_id", 1) != current_user.organization_id:
-        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta PQR.")
-
-    if not force and pqr.get("resumen_ia"):
-        return {"radicado": radicado, "resumen_ia": pqr["resumen_ia"], "cached": True}
-
-    content = _pick_pqr_text(pqr)
-    if not content.strip():
-        raise HTTPException(status_code=422, detail="La PQR no tiene texto para resumir.")
-
-    try:
-        out = container.summarize_pqrsd.execute(SummarizePQRSDInput(content=content))
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}")
-
-    resumen_ia = {
-        "lead": out.lead,
-        "topics": out.topics,
-        "original": out.original,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-    }
-    container.curated_data_lake.update_by_radicado(radicado, {"resumen_ia": resumen_ia})
-    return {"radicado": radicado, "resumen_ia": resumen_ia, "cached": False}
+        raise HTTPException(status_code=404, detail=f"PQRSD {radicado} no encontrada.")
+    pqr.update(updates)
+    container.curated_data_lake.update_by_radicado(radicado, pqr)
+    return {"success": True, "radicado": radicado}
 
 
-@router.post("/curated/{radicado}/draft-response")
-def draft_curated_pqr_response(
+class ResponderRequest(BaseModel):
+    respuesta: str
+
+
+@router.post("/curated/{radicado}/responder")
+def responder_pqrsd(
     radicado: str,
-    force: bool = False,
+    body: ResponderRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
 ):
-    """Generate a RAG-grounded draft response and persist it under `borrador_respuesta`."""
-    if container.draft_response_pqrsd is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="El borrador IA no está configurado (falta GEMINI_API_KEY).",
-        )
-
+    """
+    Worker endpoint: marks the PQRSD as 'respondido', records the response,
+    and notifies the citizen by email if they authorized it.
+    """
     pqr = container.curated_data_lake.get_by_radicado(radicado)
     if not pqr:
-        raise HTTPException(status_code=404, detail=f"PQR {radicado} no encontrada.")
-    if pqr.get("organization_id", 1) != current_user.organization_id:
-        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta PQR.")
+        raise HTTPException(status_code=404, detail=f"PQRSD {radicado} no encontrada.")
+    if pqr.get("estado") == "respondido":
+        raise HTTPException(status_code=409, detail=f"PQRSD {radicado} ya fue respondida.")
 
-    if not force and pqr.get("borrador_respuesta"):
-        return {
-            "radicado": radicado,
-            "borrador_respuesta": pqr["borrador_respuesta"],
-            "cached": True,
-        }
+    pqr["estado"]              = "respondido"
+    pqr["respuesta"]           = body.respuesta
+    pqr["timestamp_respuesta"] = datetime.now(timezone.utc).isoformat()
+    pqr["respondido_por"]      = current_user.correo_electronico
 
-    content = _pick_pqr_text(pqr)
-    if not content.strip():
-        raise HTTPException(status_code=422, detail="La PQR no tiene texto para borrador.")
+    container.curated_data_lake.update_by_radicado(radicado, pqr)
+    background_tasks.add_task(_notify_resolved, pqr)
 
+    return {"radicado": radicado, "estado": "respondido"}
+
+
+def _notify_resolved(record: dict) -> None:
     try:
-        out = container.draft_response_pqrsd.execute(
-            DraftResponseInput(
-                content=content,
-                asunto=pqr.get("asunto_principal") or pqr.get("tipo"),
-                citizen_name=_citizen_display_name(pqr),
-            )
-        )
+        if not record.get("anonima"):
+            container.notifier.notify_resolved(record)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}")
-
-    if out.used_fallback or not out.draft.strip():
-        raise HTTPException(
-            status_code=502,
-            detail="El modelo no pudo generar un borrador. Intenta de nuevo en unos segundos.",
-        )
-
-    borrador_respuesta = {
-        "draft": out.draft,
-        "sources": [{"title": s.title, "excerpt": s.excerpt} for s in out.sources],
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "aprobado": False,
-    }
-    container.curated_data_lake.update_by_radicado(
-        radicado, {"borrador_respuesta": borrador_respuesta}
-    )
-    return {
-        "radicado": radicado,
-        "borrador_respuesta": borrador_respuesta,
-        "cached": False,
-    }
+        logger.error("Error en notificación de respuesta: %s", exc)
 
 
 @router.post("/clusters", response_model=ClusterResponse)
