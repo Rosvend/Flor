@@ -73,9 +73,11 @@
 .pqrs-sidebar__list::-webkit-scrollbar {
     width: 4px;
 }
+
 .pqrs-sidebar__list::-webkit-scrollbar-track {
     background: transparent;
 }
+
 .pqrs-sidebar__list::-webkit-scrollbar-thumb {
     background: var(--color-border);
     border-radius: 2px;
@@ -113,7 +115,7 @@
 }
 
 .pqrs-item--active .pqrs-item__vence {
-    color: rgba(255,255,255,0.8);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* Row 1: ID + vencimiento */
@@ -170,9 +172,9 @@
 
 .pqrs-item--active .pqrs-vence-badge--pronto,
 .pqrs-item--active .pqrs-vence-badge--normal {
-    background-color: rgba(255,255,255,0.2);
+    background-color: rgba(255, 255, 255, 0.2);
     color: #fff;
-    border-color: rgba(255,255,255,0.3);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* Row 2: asunto truncado */
@@ -187,7 +189,7 @@
 }
 
 .pqrs-item--active .pqrs-item__asunto {
-    color: rgba(255,255,255,0.85);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 /* Row 3: tipo + confianza */
@@ -207,13 +209,28 @@
     letter-spacing: 0.04em;
 }
 
-.pqrs-tipo-badge--peticion  { background: #eff6ff; color: #1d4ed8; }
-.pqrs-tipo-badge--queja     { background: #fef2f2; color: #dc2626; }
-.pqrs-tipo-badge--reclamo   { background: #fff7ed; color: #c2410c; }
-.pqrs-tipo-badge--sugerencia { background: #f0fdf4; color: #15803d; }
+.pqrs-tipo-badge--peticion {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.pqrs-tipo-badge--queja {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.pqrs-tipo-badge--reclamo {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.pqrs-tipo-badge--sugerencia {
+    background: #f0fdf4;
+    color: #15803d;
+}
 
 .pqrs-item--active .pqrs-tipo-badge {
-    background: rgba(255,255,255,0.2) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
     color: #fff !important;
 }
 
@@ -227,8 +244,8 @@
 }
 
 .pqrs-item--active .pqrs-conf-badge {
-    background: rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.8);
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 /* ── Footer sidebar: Estadísticas + Configuración ── */
