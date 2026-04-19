@@ -5,35 +5,40 @@
 
 ## CANAL 1: META
 
+> ⚠️ **Alcance real (Hackathon):** Por limitaciones de permisos disponibles en modo desarrollo sin App Review de Meta, el alcance actual cubre únicamente **DMs de Facebook**. Comentarios de posts e Instagram quedan fuera del alcance de esta implementación. El diseño ideal está documentado como referencia para una implementación futura con permisos completos.
+
 ### 1. Fuente de datos y acceso
 
-- **Páginas fuente:** Una o varias páginas oficiales de la Alcaldía de Medellín en Meta (Facebook/Instagram)
+- **Páginas fuente:** Una o varias páginas oficiales de la Alcaldía de Medellín en Facebook
 - **Rol requerido:** Admin / Owner de cada página
-- **Permisos necesarios:**
-  - `pages_read_engagement`
-  - `pages_show_list`
-  - `pages_messaging` (para DMs)
+- **Permisos disponibles (modo desarrollo):**
+  - `pages_show_list` ✅
+  - `pages_messaging` ✅ (habilita lectura de DMs)
+- **Permisos requeridos para alcance completo (requieren App Review):**
+  - `pages_read_engagement` — comentarios de posts
+  - `instagram_basic` — contenido de Instagram
+  - `instagram_manage_messages` — DMs de Instagram
 - **Tipo de acceso:** Page Access Token por cada página administrada
-- **App Review avanzado de Meta:** No requerido para este scope
 
 ---
 
 ### 2. Proceso de sincronización
 
 - **Frecuencia:** Cada 24 horas (job programado)
-- **Canales consumidos:**
-  - DMs recibidos en las últimas 24 horas
-  - Comentarios recibidos en las últimas 24 horas en **todos los posts existentes** de la página (no solo posts publicados en las últimas 24 horas)
+- **Canales consumidos (alcance actual):**
+  - DMs recibidos en las últimas 24 horas en páginas de Facebook administradas
+- **Canales pendientes (alcance futuro):**
+  - Comentarios en todos los posts de las últimas 24 horas
+  - DMs y comentarios de Instagram
 - **Mecanismo:** Agente de sincronización via Graph API de Meta
-  - Endpoint comentarios: `GET /{page-id}/feed?fields=comments{message,from,created_time}`
-  - Endpoint DMs: `GET /me/conversations?fields=messages{message,from,created_time}`
+  - Endpoint DMs: `GET /{page-id}/conversations?fields=messages{message,from,created_time}`
   - Filtro temporal: `since` y `until` sobre `created_time` de las últimas 24 horas
 
 ---
 
 ### 3. Clasificación PQRSD
 
-- Cada mensaje/comentario recuperado pasa por un clasificador
+- Cada DM recuperado pasa por un clasificador
 - El clasificador determina si el contenido corresponde a una **Pregunta, Queja, Reclamo, Sugerencia o Duda**
 - Los mensajes que no sean PQRSD se descartan
 - Los mensajes clasificados como PQRSD avanzan al siguiente paso
@@ -48,10 +53,9 @@ Por cada PQRSD identificada se extrae:
 |---|---|---|
 | Nombre del usuario | Perfil Meta (`from.name`) | Cuando es público |
 | ID de usuario Meta | `from.id` | Siempre disponible |
-| Canal de origen | DM / Comentario | Siempre disponible |
+| Canal de origen | DM Facebook | Siempre disponible |
 | Contenido del mensaje | `message` | Siempre disponible |
 | Fecha y hora | `created_time` | Siempre disponible |
-| Post de origen | `post_id` | Solo en comentarios |
 
 ---
 
@@ -69,7 +73,7 @@ Ambos tipos reciben:
 - Número de radicado
 - Timestamp de radicación
 - Clasificación del tipo (P / Q / R / S / D)
-- Canal de origen (META_DM o META_COMMENT)
+- Canal de origen (META_DM)
 
 ---
 
@@ -82,7 +86,7 @@ Estructura del registro:
   "radicado": "string",
   "timestamp_radicacion": "ISO8601",
   "tipo": "P | Q | R | S | D",
-  "canal": "META_DM | META_COMMENT",
+  "canal": "META_DM",
   "anonima": true | false,
   "usuario": {
     "nombre": "string | null",
@@ -90,7 +94,6 @@ Estructura del registro:
   },
   "contenido": "string",
   "metadata": {
-    "post_id": "string | null",
     "created_time": "ISO8601"
   }
 }
@@ -188,5 +191,5 @@ Ambos canales convergen en la misma entidad con campos comunes y campos opcional
 | `usuario.id_meta` | ✅ | ❌ |
 | `usuario.documento` | ❌ | Opcional |
 | `usuario.telefono` | ❌ | ✅ |
-| `metadata.post_id` | Solo comments | ❌ |
+| `metadata.post_id` | ❌ (futuro) | ❌ |
 | `metadata.created_time` | ✅ | ✅ |
