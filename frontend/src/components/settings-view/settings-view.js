@@ -72,6 +72,25 @@ export function renderSettingsView(containerEl) {
                 </div>
             </section>
 
+            <!-- Sección: Base de conocimiento (Flor) -->
+            <section class="settings-section">
+                <h2 class="settings-section__title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                    Base de conocimiento de Flor
+                </h2>
+
+                <div class="settings-item" style="border-bottom: none;">
+                    <div class="settings-item__info">
+                        <span class="settings-item__label">Gestionar documentos</span>
+                        <span class="settings-item__desc">Sube PDF o Markdown público para que Flor los use como contexto en sus respuestas. Los fragmentos se indexan automáticamente.</span>
+                    </div>
+                    <a href="/admin/knowledge-base" class="settings-button--secondary" data-link style="padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Abrir
+                    </a>
+                </div>
+            </section>
+
             <!-- Sección: Organización -->
             <section class="settings-section">
                 <h2 class="settings-section__title">
