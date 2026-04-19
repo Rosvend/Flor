@@ -1,12 +1,4 @@
-# MANUAL DE BUENAS PRÁCTICAS DE
-
- PETICIONES, QUEJAS, RECLAMOS,
-
- SUGERENCIAS Y DENUNCIAS POR ACTOS
-
- DE CORRUPCIÓN DE SERVIDORES
-
- PÚBLICOS O CONTRATISTAS
+# MANUAL DE BUENAS PRÁCTICAS DE PETICIONES, QUEJAS, RECLAMOS, SUGERENCIAS Y DENUNCIAS POR ACTOS DE CORRUPCIÓN DE SERVIDORES PÚBLICOS O CONTRATISTAS
 
 ### Secretaría de Gestion Humana y Servicio a la Ciudadanía.
 
@@ -16,10 +8,6 @@
  E innovación de Medellín.
 
 -----
-
-|Cód. MA SECI-003|Manual<br>MA-SECI Manual de Buenas Prácticas para<br>PQRSD|Col3|
-|---|---|---|
-|Versión. 5|Versión. 5|Versión. 5|
 
 ## INTRODUCCIÓN
 

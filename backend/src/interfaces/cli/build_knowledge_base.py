@@ -54,7 +54,11 @@ def run(
     for pdf in pdfs:
         started = time.perf_counter()
         md_path = convert(pdf, md_out, force=force_reconvert)
-        entries = chunk_markdown(md_path, source_pdf=pdf.name)
+        entries = chunk_markdown(
+            md_path,
+            source_pdf=pdf.name,
+            extra_metadata={"visibility": "public"},
+        )
         headings = len({e.heading_path for e in entries if e.heading_path})
         took = time.perf_counter() - started
 
