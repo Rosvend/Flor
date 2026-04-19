@@ -17,3 +17,9 @@ class CuratedDataLakePort(ABC):
     @abstractmethod
     def get_by_radicado(self, radicado: str) -> dict | None:
         """Retrieves a single record by its radicado."""
+
+    @abstractmethod
+    def update_by_radicado(self, radicado: str, patch: dict) -> dict | None:
+        """Shallow-merges `patch` into the record with matching radicado and persists.
+
+        Returns the merged record, or None if no record matched."""

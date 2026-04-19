@@ -385,7 +385,37 @@ export const pqrsListService = {
             requiresAuth: true,
             data: { respuesta_funcionario: texto, estado: 'CERRADO' }
         });
-    }
+    },
+    /**
+     * F5 — Generates the 3-layer AI summary (lead, topics, original).
+     * Persists under `resumen_ia` on the curated record.
+     * @param {string} id radicado
+     * @param {{force?: boolean}} opts
+     */
+    async summarize(id, { force = false } = {}) {
+        const params = force ? { force: 'true' } : null;
+        return request(`/pqrs/curated/${id}/summarize`, {
+            method: 'POST',
+            requiresAuth: true,
+            params,
+            timeout: 60000, // LLM calls
+        });
+    },
+    /**
+     * F5 — Generates a RAG-based draft response for the agent to review.
+     * Persists under `borrador_respuesta` on the curated record.
+     * @param {string} id radicado
+     * @param {{force?: boolean}} opts
+     */
+    async draftResponse(id, { force = false } = {}) {
+        const params = force ? { force: 'true' } : null;
+        return request(`/pqrs/curated/${id}/draft-response`, {
+            method: 'POST',
+            requiresAuth: true,
+            params,
+            timeout: 90000, // LLM + RAG, longer reply
+        });
+    },
 };
 
 // Exported helpers used by aplicacion page

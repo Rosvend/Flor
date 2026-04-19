@@ -540,3 +540,81 @@
 .pqr-toast--error {
     background: var(--color-danger);
 }
+
+/* ── F5 — AI summary + draft response actions ─────────────────── */
+.pqr-f5-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0.75rem 0 0.5rem 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border, #e3e8ef);
+    border-radius: var(--radius-md, 8px);
+    background: var(--color-surface-alt, #f7f9fc);
+}
+
+.pqr-f5-actions .btn--ia {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    font-size: var(--text-sm, 0.875rem);
+    font-weight: 600;
+    background: var(--color-accent, #5b6bff);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-full, 999px);
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.pqr-f5-actions .btn--ia:hover:not(:disabled) {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+}
+
+.pqr-f5-actions .btn--ia:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.pqr-f5-note {
+    flex-basis: 100%;
+    font-size: var(--text-xs, 0.75rem);
+    color: var(--color-text-muted, #6b7488);
+    margin-top: 0.25rem;
+}
+
+.pqr-f5-sources {
+    margin: 0.5rem 0;
+    font-size: var(--text-sm, 0.875rem);
+}
+
+.pqr-f5-sources summary {
+    cursor: pointer;
+    color: var(--color-text-muted, #6b7488);
+    padding: 0.25rem 0;
+}
+
+.pqr-f5-sources__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--color-border, #e3e8ef);
+}
+
+.pqr-f5-source__title {
+    font-weight: 600;
+    font-size: var(--text-xs, 0.75rem);
+    color: var(--color-text, #1b2330);
+}
+
+.pqr-f5-source__excerpt {
+    font-size: var(--text-xs, 0.75rem);
+    color: var(--color-text-muted, #6b7488);
+    line-height: 1.4;
+    margin-top: 0.15rem;
+}

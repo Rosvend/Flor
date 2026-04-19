@@ -30,3 +30,11 @@ class InMemoryCuratedDataLake(CuratedDataLakePort):
             if r.get("radicado") == radicado:
                 return r
         return None
+
+    def update_by_radicado(self, radicado: str, patch: dict) -> dict | None:
+        for key, record in self._store.items():
+            if record.get("radicado") == radicado:
+                record.update(patch)
+                self._store[key] = record
+                return record
+        return None
