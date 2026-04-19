@@ -22,8 +22,18 @@ class InMemoryCuratedDataLake(CuratedDataLakePort):
             keys.append(radicado)
         return keys
 
-    def update_by_radicado(self, radicado: str, record: dict) -> None:
-        self._store[radicado] = record
+    def update_by_radicado(self, radicado: str, updates: dict) -> dict | None:
+        """Merge-update: merges `updates` into the existing record so pipeline
+        stages can add fields incrementally (analisis_ia, resumen_ia, etc.)
+        without overwriting the entire document."""
+        existing = self._store.get(radicado)
+        if existing is None:
+            # Fallback: treat as full replacement if record doesn't exist yet
+            self._store[radicado] = updates
+            return updates
+        existing.update(updates)
+        self._store[radicado] = existing
+        return existing
 
     def get_by_radicado(self, radicado: str) -> dict | None:
         return self._store.get(radicado)

@@ -14,6 +14,25 @@ import { TIPO_PQRS } from '../../service/pqrs-mock.js';
      pqrId       — string e.g. "RAD-2026-04821"
    ================================================================ */
 
+/* ── Compat Helpers (support both old and new schema) ─────────── */
+
+function getContenido(pqr) {
+    return pqr.contenido || pqr.descripcion_detallada || '';
+}
+
+function getCitizenName(pqr) {
+    // New format
+    if (pqr.usuario && pqr.usuario.nombre) return pqr.usuario.nombre;
+    // Legacy format
+    const c = pqr.ciudadano || {};
+    const full = `${c.nombres || ''} ${c.apellidos || ''}`.trim();
+    return full || null;
+}
+
+function getTipoValue(pqr) {
+    return pqr.tipo || pqr.asunto_principal || 'peticion';
+}
+
 /* ── Helpers ────────────────────────────────────────────────────── */
 
 function formatFecha(iso) {
@@ -63,7 +82,7 @@ function buildDetailHTML(pqr) {
     const borrador = pqr.borrador_respuesta || null; // F5 draft
 
     // The raw citizen text can live under either field depending on ingest path.
-    const originalText = pqr.contenido || pqr.descripcion_detallada || '';
+    const originalText = getContenido(pqr);
 
     // Capa 1/2/3 keep their original semantics: they are populated by the older
     // classification pipeline (analisis_ia). The F5 summary is rendered as its
@@ -111,6 +130,8 @@ function buildDetailHTML(pqr) {
         historialLimpio: true,
         solicitudesPrevias: 0
     };
+
+    const citizenDisplayName = getCitizenName(pqr) || 'Anónimo';
 
     const ciudadanoMsg = ciudadano.historialLimpio
         ? 'El ciudadano tiene historial limpio en solicitudes previas.'

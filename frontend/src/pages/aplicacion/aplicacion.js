@@ -6,6 +6,7 @@ import { renderStatsView } from '../../components/stats-view/stats-view.js';
 import { renderSettingsView } from '../../components/settings-view/settings-view.js';
 import { router } from '../../app/router.js';
 import { getDashboardData } from '../../service/api.js';
+import { storage } from '../../service/storage.js';
 
 /* ================================================================
    APLICACION.JS — Página de gestión PQRS
@@ -109,6 +110,12 @@ async function renderWelcome(mainAreaEl) {
  * Llamada por el router cada vez que la ruta es /aplicacion o /aplicacion/:id
  */
 export function renderAplicacion() {
+    // Auth guard
+    if (!storage.isAuthenticated()) {
+        router.navigate('/login');
+        return;
+    }
+
     const app = document.getElementById('app');
     const currentPath = window.location.pathname;
     const activePqrId = getPqrIdFromPath(currentPath);

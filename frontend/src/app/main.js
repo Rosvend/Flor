@@ -1,5 +1,6 @@
 import { router } from './router.js'
 import { renderA11yWidget } from '../components/a11y-widget/a11y-widget.js'
+import { AUTH_EXPIRED_EVENT } from '../service/api.js'
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -7,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialize the accessibility widget globally
     renderA11yWidget()
+
+    // Redirect to login on session expiry
+    window.addEventListener(AUTH_EXPIRED_EVENT, () => {
+        router.navigate('/login')
+    })
 
     /* Ocultar el widget de accesibilidad en la página /aplicacion
        ya que tiene su propio layout full-screen sin espacio para el widget flotante */

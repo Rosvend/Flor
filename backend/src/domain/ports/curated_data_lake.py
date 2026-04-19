@@ -11,8 +11,8 @@ class CuratedDataLakePort(ABC):
         """Persists records keyed by radicado; returns storage keys."""
 
     @abstractmethod
-    def update_by_radicado(self, radicado: str, record: dict) -> None:
-        """Overwrites the record identified by radicado."""
+    def update_by_radicado(self, radicado: str, updates: dict) -> dict | None:
+        """Merge-updates the record identified by radicado. Returns the merged record."""
 
     @abstractmethod
     def get_by_radicado(self, radicado: str) -> dict | None:
