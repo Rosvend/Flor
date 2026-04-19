@@ -1,4 +1,4 @@
-export const USE_MOCK = false;
+export const USE_MOCK = true;
 
 // Simulador de retraso de red
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

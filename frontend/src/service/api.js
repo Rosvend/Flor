@@ -240,6 +240,15 @@ export const authService = {
 
         if (USE_MOCK) {
             data = await mockAuth.login(correoElectronico, password)
+            storage.setTokens(data.access_token)
+            storage.setUser({
+                user_id: data.user_id,
+                nombre: data.nombre,
+                correo_electronico: correoElectronico,
+                organization_id: data.organization_id,
+            })
+            emitAuthChanged()
+            return data
         } else {
             data = await request('/auth/login', {
                 method: 'POST',
