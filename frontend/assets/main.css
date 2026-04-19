@@ -148,22 +148,22 @@
     --color-surface-3:        hsl(210, 20%, 22%);      /* Hover */
 
     /* ── AZULES INSTITUCIONALES ── */
-    --color-primary:          hsl(200, 80%, 65%);     /* Azul claro brillante */
-    --color-primary-hover:    hsl(200, 80%, 75%);
-    --color-primary-light:    hsl(200, 50%, 20%);     /* Fondo azul oscuro suave */
-    --color-primary-text:     hsl(200, 80%, 70%);
+    --color-primary:          hsl(196, 78%, 58%);      /* Mismo azul del modo día, adaptado a fondo oscuro */
+    --color-primary-hover:    hsl(196, 78%, 66%);
+    --color-primary-light:    hsl(204, 55%, 24%);
+    --color-primary-text:     hsl(196, 88%, 78%);
 
-    --color-secondary:        hsl(190, 70%, 60%);
-    --color-secondary-hover:  hsl(190, 70%, 70%);
-    --color-secondary-light:  hsl(190, 50%, 20%);
+    --color-secondary:        hsl(200, 66%, 58%);
+    --color-secondary-hover:  hsl(200, 66%, 66%);
+    --color-secondary-light:  hsl(200, 52%, 24%);
 
-    --color-tertiary:         hsl(200, 50%, 70%);
+    --color-tertiary:         hsl(202, 55%, 82%);
 
-    /* ── COMPLEMENTARIO VERDE (más vibrante en oscuro) ── */
-    --color-accent:           hsl(142, 65%, 50%);      /* Verde brillante */
-    --color-accent-hover:     hsl(142, 65%, 60%);
-    --color-accent-light:     hsl(142, 50%, 15%);
-    --color-accent-text:      hsl(142, 65%, 60%);
+    /* ── COMPLEMENTARIO (consistente con modo claro) ── */
+    --color-accent:           hsl(200, 66%, 58%);
+    --color-accent-hover:     hsl(200, 66%, 66%);
+    --color-accent-light:     hsl(200, 52%, 24%);
+    --color-accent-text:      hsl(0, 0%, 100%);
 
     /* ── ESTADOS SEMÁNTICOS ── */
     --color-success:          hsl(142, 55%, 48%);
@@ -177,20 +177,20 @@
 
     /* ── TEXTO ── */
     --color-text-primary:     hsl(210, 25%, 94%);     /* Blanco azulado */
-    --color-text-secondary:   hsl(214, 20%, 68%);     /* Gris azulado claro */
-    --color-text-muted:       hsl(214, 15%, 48%);
+    --color-text-secondary:   hsl(212, 22%, 75%);     /* Gris azulado claro */
+    --color-text-muted:       hsl(212, 16%, 58%);
     --color-text-inverse:     hsl(220, 35%, 10%);
-    --color-text-on-accent:   hsl(34, 60%, 10%);      /* Oscuro sobre ámbar */
+    --color-text-on-accent:   hsl(0, 0%, 100%);
 
     /* ── BORDES ── */
-    --color-border:           hsl(220, 25%, 22%);
-    --color-border-strong:    hsl(220, 25%, 32%);
+    --color-border:           hsl(212, 26%, 28%);
+    --color-border-strong:    hsl(212, 26%, 38%);
     --color-border-focus:     hsl(214, 80%, 58%);
 
     /* ── NAVBAR ── */
-    --color-navbar-bg:        hsl(210, 20%, 12%);      /* Casi negro azulado */
-    --color-navbar-text:      hsl(200, 20%, 90%);
-    --color-navbar-border:    hsl(210, 20%, 20%);
+    --color-navbar-bg:        hsl(204, 38%, 16%);      /* Azul profundo alineado a la identidad */
+    --color-navbar-text:      hsl(210, 28%, 92%);
+    --color-navbar-border:    hsl(204, 32%, 24%);
 
     /* ── SOMBRAS ── */
     --shadow-sm:    0 1px 3px  hsla(0, 0%, 0%, 0.30), 0 1px 2px hsla(0, 0%, 0%, 0.20);
@@ -631,7 +631,7 @@ strong { font-weight: 600; }
    RESPONSIVE — main offset por navbar fija
 ────────────────────────────────────────────────────────── */
 .main-content {
-    padding-top: 80px; /* 64px navbar + 16px */
+    padding-top: 116px; /* 36px topbar + 64px navbar + 16px */
 }
 
 @media (max-width: 768px) {

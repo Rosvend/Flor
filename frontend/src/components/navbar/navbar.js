@@ -1,5 +1,6 @@
 import './navbar.css';
 import { storage } from '../../service/storage.js';
+import alcaldiaLogo from '../../../assets/alcaldialogo.png';
 
 function activeClass(isActive) {
     return isActive ? 'navbar__link navbar__link--pill navbar__link--active' : 'navbar__link';
@@ -21,9 +22,19 @@ export function renderNavbar(options = {}) {
         : '';
 
     return `
+        <div class="topbar-gov">
+            <div class="topbar-gov__inner">
+                <img
+                    src="https://cdnwordpresstest-f0ekdgevcngegudb.z01.azurefd.net/es/wp-content/themes/theme_alcaldia/img/logo_gov.png"
+                    alt="Gov.co"
+                    class="topbar-gov__logo"
+                >
+            </div>
+        </div>
         <nav class="navbar" role="navigation" aria-label="Navegacion principal">
             <a href="/" class="navbar__brand" data-link>
-                PQRS Medellin
+                <span class="navbar__brand-text">Flor te escucha</span>
+                <img src="${alcaldiaLogo}" alt="Alcaldía de Medellín" class="navbar__alcaldia-logo">
             </a>
 
             <div class="navbar__center-links">

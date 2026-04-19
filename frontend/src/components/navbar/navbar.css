@@ -1,9 +1,38 @@
-.navbar {
+/* ── Top bar Gov.co ─────────────────────────────── */
+.topbar-gov {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    z-index: var(--z-sticky);
+    height: 36px;
+    background-color: #003882; /* azul colegio / gobierno */
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+}
+
+.topbar-gov__inner {
+    width: 100%;
+    padding-inline: var(--space-4);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.topbar-gov__logo {
+    height: 22px;
+    width: auto;
+    object-fit: contain;
+    margin-right: var(--space-2);
+}
+
+/* ── Navbar ──────────────────────────────────────── */
+.navbar {
+    position: fixed;
+    top: 36px; /* below topbar-gov */
+    left: 0;
+    right: 0;
+    z-index: 10000;
     height: 64px;
     background-color: var(--color-primary);
     border-bottom: none;
@@ -22,6 +51,19 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
+}
+
+.navbar__brand-text {
+    line-height: 1;
+}
+
+.navbar__alcaldia-logo {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+    margin-left: var(--space-2);
+    vertical-align: middle;
+    opacity: 0.95;
 }
 
 .navbar__brand:hover {
@@ -67,5 +109,9 @@
 @media (max-width: 768px) {
     .navbar__center-links {
         display: none;
+    }
+
+    .navbar__alcaldia-logo {
+        height: 24px;
     }
 }

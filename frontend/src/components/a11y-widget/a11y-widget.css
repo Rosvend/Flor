@@ -98,17 +98,99 @@
     background-color: var(--color-surface-2);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    gap: var(--space-1);
 }
 
-/* Modificaciones a los botones originales para adaptarse al nuevo layout */
 .btn-a11y {
+    min-height: 2.25rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    background: linear-gradient(180deg, var(--color-surface), var(--color-surface-2));
     color: var(--color-text-primary);
-    border-color: var(--color-border);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+    box-shadow: 0 2px 6px rgba(7, 23, 45, 0.08);
 }
 
 .btn-a11y:hover {
-    background: var(--color-surface-3);
+    transform: translateY(-1px);
+    background: linear-gradient(180deg, var(--color-surface), var(--color-surface-3));
     border-color: var(--color-border-strong);
+    box-shadow: 0 6px 14px rgba(7, 23, 45, 0.12);
+}
+
+.btn-a11y:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(7, 23, 45, 0.08);
+}
+
+.btn-a11y:focus-visible {
+    outline: 3px solid var(--color-border-focus);
+    outline-offset: 2px;
+}
+
+.btn-a11y:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-font-down,
+.btn-font-up {
+    width: 2.3rem;
+    min-width: 2.3rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-theme {
+    width: 100%;
+    justify-content: center;
+    background: linear-gradient(180deg, var(--color-primary), var(--color-secondary));
+    border-color: transparent;
+    color: var(--color-text-inverse);
+    box-shadow: 0 8px 18px rgba(0, 82, 145, 0.2);
+}
+
+.btn-theme:hover {
+    background: linear-gradient(180deg, var(--color-primary-hover), var(--color-secondary));
+    color: var(--color-text-inverse);
+    border-color: transparent;
+}
+
+[data-theme="dark"] .a11y-controls {
+    background-color: var(--color-surface-2);
+    border-color: var(--color-border-strong);
+}
+
+[data-theme="dark"] .btn-a11y {
+    background: linear-gradient(180deg, hsl(212, 25%, 22%), hsl(212, 24%, 18%));
+    border-color: hsl(212, 26%, 36%);
+    color: hsl(210, 30%, 94%);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .btn-a11y:hover {
+    background: linear-gradient(180deg, hsl(212, 28%, 26%), hsl(212, 24%, 20%));
+    border-color: hsl(196, 68%, 56%);
+}
+
+[data-theme="dark"] .btn-theme {
+    background: linear-gradient(180deg, hsl(196, 78%, 58%), hsl(200, 66%, 52%));
+    color: hsl(210, 40%, 12%);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .btn-theme:hover {
+    background: linear-gradient(180deg, hsl(196, 78%, 66%), hsl(200, 66%, 60%));
+    color: hsl(210, 40%, 10%);
 }
 
 .font-level-dot {

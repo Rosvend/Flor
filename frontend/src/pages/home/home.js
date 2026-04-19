@@ -38,15 +38,42 @@ export function renderHome() {
                 </div>
             </div>
 
-            <!-- Center Chatbot Floating Element -->
-            <div class="chatbot-floating-wrapper">
-                <button class="chatbot-img-btn" aria-label="Hablar con Flor chatbot">
-                    <img src="${chatbotImg}" alt="Flor chatbot">
-                </button>
-                <div class="chatbot-bubble">
-                    Habla con Flor<br>antes de crear<br>tu pqr
+            <!-- Chatbot Section -->
+            <section class="chatbot-mobile-panel" id="chatbot-mobile-panel">
+                <div class="chatbot-floating-wrapper">
+                    <button class="chatbot-img-btn" aria-label="Hablar con Flor chatbot">
+                        <img src="${chatbotImg}" alt="Flor chatbot">
+                    </button>
+                    <div class="chatbot-bubble">
+                        Habla con Flor<br>antes de crear<br>tu pqr
+                    </div>
                 </div>
-            </div>
+                <div class="chatbot-window" id="chatbot-window">
+                    <div class="chatbot-header">
+                        <div class="chatbot-header-info">
+                            <img src="${chatbotImg}" alt="Flor" class="chatbot-header-avatar">
+                            <div>
+                                <h3 class="chatbot-header-title">Flor</h3>
+                                <span class="chatbot-header-status">En línea</span>
+                            </div>
+                        </div>
+                        <button class="chatbot-close-btn" id="chatbot-close-btn" aria-label="Cerrar chat">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="chatbot-messages" id="chatbot-messages">
+                        <div class="chat-message chat-message--bot">
+                            ¡Hola! Soy Flor, la asistente virtual de la Alcaldía de Medellín. ¿En qué te puedo ayudar hoy?
+                        </div>
+                    </div>
+                    <form class="chatbot-input-area" id="chatbot-form">
+                        <input type="text" class="chatbot-input" id="chatbot-input" placeholder="Escribe tu mensaje..." required>
+                        <button type="submit" class="chatbot-send-btn" aria-label="Enviar mensaje">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </section>
 
             <!-- Right Column (Video Background) -->
             <div class="home-col-new home-col--right">
@@ -80,33 +107,6 @@ export function renderHome() {
                 </div>
             </div>
 
-            <!-- Chatbot Window -->
-            <div class="chatbot-window" id="chatbot-window">
-                <div class="chatbot-header">
-                    <div class="chatbot-header-info">
-                        <img src="${chatbotImg}" alt="Flor" class="chatbot-header-avatar">
-                        <div>
-                            <h3 class="chatbot-header-title">Flor</h3>
-                            <span class="chatbot-header-status">En línea</span>
-                        </div>
-                    </div>
-                    <button class="chatbot-close-btn" id="chatbot-close-btn" aria-label="Cerrar chat">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    </button>
-                </div>
-                <div class="chatbot-messages" id="chatbot-messages">
-                    <div class="chat-message chat-message--bot">
-                        ¡Hola! Soy Flor, la asistente virtual de la Alcaldía de Medellín. ¿En qué te puedo ayudar hoy?
-                    </div>
-                </div>
-                <form class="chatbot-input-area" id="chatbot-form">
-                    <input type="text" class="chatbot-input" id="chatbot-input" placeholder="Escribe tu mensaje..." required>
-                    <button type="submit" class="chatbot-send-btn" aria-label="Enviar mensaje">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                    </button>
-                </form>
-            </div>
-
         </main>
 
         <footer class="footer-simple">
@@ -123,6 +123,7 @@ export function renderHome() {
 
     // Chatbot Logic
     const chatbotWrapper = document.querySelector('.chatbot-floating-wrapper');
+    const chatbotMobilePanel = document.getElementById('chatbot-mobile-panel');
     const chatbotBtn = document.querySelector('.chatbot-img-btn');
     const chatbotWindow = document.getElementById('chatbot-window');
     const chatbotCloseBtn = document.getElementById('chatbot-close-btn');
@@ -135,6 +136,7 @@ export function renderHome() {
     chatbotWrapper.addEventListener('click', () => {
         if (chatbotWrapper.classList.contains('is-open')) return;
         chatbotWrapper.classList.add('is-open');
+        chatbotMobilePanel?.classList.add('is-open');
         setTimeout(() => {
             chatbotWindow.classList.add('is-active');
             chatbotInput.focus();
@@ -145,6 +147,7 @@ export function renderHome() {
         chatbotWindow.classList.remove('is-active');
         setTimeout(() => {
             chatbotWrapper.classList.remove('is-open');
+            chatbotMobilePanel?.classList.remove('is-open');
         }, 300);
     });
 
