@@ -10,17 +10,30 @@ from src.application.use_cases.ingest_raw_messages import IngestRawMessages
 from src.application.use_cases.query_flor_chatbot import QueryFlorChatbot
 from src.infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.auth.jwt_token_generator import JwtTokenGenerator
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from src.infrastructure.knowledge_base.chroma_knowledge_base import ChromaKnowledgeBase
 from src.infrastructure.knowledge_base.document_ingestion_service import (
     DocumentIngestionService,
 )
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 from src.infrastructure.persistence.in_memory_raw_data_lake import InMemoryRawDataLake
 from src.infrastructure.persistence.in_memory_user_repository import InMemoryUserRepository
 
 logger = logging.getLogger(__name__)
 
 # ── Auth & Persistence ───────────────────────────────────────────────────────
-user_repository = InMemoryUserRepository()
+if os.getenv("DATABASE_URL"):
+    from src.infrastructure.persistence.database import init_db
+    from src.infrastructure.persistence.postgres_user_repository import PostgresUserRepository
+    init_db()
+    user_repository = PostgresUserRepository()
+else:
+    from src.infrastructure.persistence.in_memory_user_repository import InMemoryUserRepository
+    user_repository = InMemoryUserRepository()
 password_hasher = BcryptPasswordHasher()
 token_generator = JwtTokenGenerator()
 

@@ -5,6 +5,7 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.interfaces.http.auth_router import router as auth_router
 from src.interfaces.http.chatbot_router import router as chatbot_router
@@ -40,13 +41,4 @@ app.include_router(chatbot_router, prefix="/api/v1")
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "pqrs-backend"}
-
-_test_user = User(                                                                                                                                                                    
-    id="1",
-    nombre="Admin Test",                                                                                                                                                              
-    correo_electronico="admin@test.com",
-    password_hash=password_hasher.hash("admin123"),                                                                                                                                   
-    organization_id=1,
-)                                                                                                                                                                                     
-user_repository.save(_test_user)
 
