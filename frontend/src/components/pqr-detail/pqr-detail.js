@@ -1,5 +1,6 @@
 import './pqr-detail.css';
-import { pqrsMockService, TIPO_PQRS } from '../../service/pqrs-mock.js';
+import { getPqrDetails, pqrsListService } from '../../service/api.js';
+import { TIPO_PQRS } from '../../service/pqrs-mock.js';
 
 /* ================================================================
    PQR-DETAIL.JS — Componente de detalle de una PQR
@@ -16,15 +17,18 @@ import { pqrsMockService, TIPO_PQRS } from '../../service/pqrs-mock.js';
 /* ── Helpers ────────────────────────────────────────────────────── */
 
 function formatFecha(iso) {
+    if (!iso) return 'N/A';
     const d = new Date(iso);
     const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     return `${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
 }
 
-function getVenceLabel(fechaVence) {
+function getVenceLabel(fechaRadicado) {
+    if (!fechaRadicado) return 'Sin fecha';
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const vence = new Date(fechaVence);
+    const vence = new Date(fechaRadicado);
+    vence.setDate(vence.getDate() + 15);
     vence.setHours(0, 0, 0, 0);
     const diff = Math.round((vence - hoy) / (1000 * 60 * 60 * 24));
     if (diff <= 0) return 'Vence Hoy';
@@ -32,36 +36,59 @@ function getVenceLabel(fechaVence) {
 }
 
 function getTipoLabel(tipo) {
-    return TIPO_PQRS[tipo]?.label || tipo;
+    return TIPO_PQRS[tipo?.toUpperCase()]?.label || tipo;
 }
 
 /* ── Renderizado del HTML ────────────────────────────────────────── */
 
 function buildDetailHTML(pqr) {
-    const venceLabel = getVenceLabel(pqr.fechaVence);
+    const fechaRadicado = pqr.timestamp_radicacion || new Date().toISOString();
+    const venceLabel = getVenceLabel(fechaRadicado);
     const tipoLabel = getTipoLabel(pqr.tipo);
     const canalLabel = pqr.canal === 'WEB' ? 'Canal Web'
         : pqr.canal === 'PRESENCIAL' ? 'Presencial'
         : pqr.canal === 'APP' ? 'App Móvil'
-        : 'Teléfono';
+        : 'Facebook/Meta';
 
-    const tematicasHTML = pqr.capas.tematicas
+    const analisis = pqr.analisis_ia || {};
+    
+    // Mapeo de capas
+    const capas = {
+        solicitudConcreta: analisis.texto_mejorado || 'Pendiente de análisis...',
+        tematicas: analisis.tipo_sugerido ? [analisis.tipo_sugerido, analisis.secretaria_asignada] : ['General'],
+        textoOriginal: pqr.contenido
+    };
+
+    const tematicasHTML = capas.tematicas
+        .filter(t => t)
         .map(t => `<span class="pqr-tematica-tag">${t}</span>`)
         .join('');
 
-    const ciudadanoMsg = pqr.infoCiudadano.historialLimpio
+    // Precedente y Ciudadano (Mocks para el MVP si no hay en el backend)
+    const precedente = pqr.precedente || {
+        id: 'RAD-AUTO-001',
+        resumen: 'Respuesta sugerida basada en casos similares de ' + (analisis.secretaria_asignada || 'Gestión General'),
+        similitud: 85
+    };
+
+    const ciudadano = pqr.infoCiudadano || {
+        historialLimpio: true,
+        solicitudesPrevias: 0
+    };
+
+    const ciudadanoMsg = ciudadano.historialLimpio
         ? 'El ciudadano tiene historial limpio en solicitudes previas.'
-        : `El ciudadano tiene ${pqr.infoCiudadano.solicitudesPrevias} solicitudes previas registradas.`;
+        : `El ciudadano tiene ${ciudadano.solicitudesPrevias} solicitudes previas registradas.`;
 
     return `
         <!-- ── Panel central: detalle ── -->
-        <section class="pqr-detail" aria-label="Detalle de PQR ${pqr.id}">
+        <section class="pqr-detail" aria-label="Detalle de PQR ${pqr.radicado}">
 
             <!-- Header -->
             <div class="pqr-detail__header">
                 <div class="pqr-detail__header-left">
                     <span class="pqr-detail__tipo-tag">${tipoLabel.toUpperCase()}</span>
-                    <h1 class="pqr-detail__radicado">${pqr.id}</h1>
+                    <h1 class="pqr-detail__radicado">${pqr.radicado}</h1>
                 </div>
                 <div class="pqr-detail__header-actions">
                     <button class="btn--reclasificar" id="btn-reclasificar" aria-label="Reclasificar esta PQR">
@@ -78,7 +105,7 @@ function buildDetailHTML(pqr) {
             <div class="pqr-detail__meta">
                 <span class="pqr-detail__meta-item">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                    ${formatFecha(pqr.fechaRadicado)}
+                    ${formatFecha(fechaRadicado)}
                 </span>
                 <span class="pqr-detail__meta-item">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
@@ -97,16 +124,16 @@ function buildDetailHTML(pqr) {
                 <div class="pqr-capa-card">
                     <div class="pqr-capa-card__label">
                         <span class="pqr-capa-card__label-num">1</span>
-                        Capa 1 — Solicitud Concreta
+                        Capa 1 — Solicitud Concreta (IA)
                     </div>
-                    <p class="pqr-capa-card__texto">${pqr.capas.solicitudConcreta}</p>
+                    <p class="pqr-capa-card__texto">${capas.solicitudConcreta}</p>
                 </div>
 
                 <!-- Capa 2: Discriminación temática -->
                 <div class="pqr-capa-card">
                     <div class="pqr-capa-card__label">
                         <span class="pqr-capa-card__label-num">2</span>
-                        Capa 2 — Discriminación Temática
+                        Capa 2 — Discriminación Temática (IA)
                     </div>
                     <div class="pqr-tematicas" id="tematicas-container">
                         ${tematicasHTML}
@@ -123,7 +150,7 @@ function buildDetailHTML(pqr) {
                         <span class="pqr-capa-card__label-num">3</span>
                         Capa 3 — Texto Original
                     </div>
-                    <blockquote class="pqr-texto-original">${pqr.capas.textoOriginal}</blockquote>
+                    <blockquote class="pqr-texto-original">${capas.textoOriginal}</blockquote>
                 </div>
 
             </div>
@@ -167,15 +194,15 @@ function buildDetailHTML(pqr) {
                 </div>
 
                 <div class="pqr-precedente-card">
-                    <div class="pqr-precedente-card__id">${pqr.precedente.id}</div>
-                    <p class="pqr-precedente-card__resumen">${pqr.precedente.resumen}</p>
+                    <div class="pqr-precedente-card__id">${precedente.id}</div>
+                    <p class="pqr-precedente-card__resumen">${precedente.resumen}</p>
                     <button class="pqr-precedente-card__link" id="btn-ver-respuesta" aria-label="Ver respuesta del precedente">
                         Ver respuesta
                     </button>
                 </div>
 
                 <p class="pqr-similitud-badge">
-                    Sugerencia basada en ${pqr.precedente.similitud}% de similitud temática.
+                    Sugerencia basada en ${precedente.similitud}% de similitud temática.
                 </p>
             </div>
 
@@ -225,20 +252,21 @@ export async function renderPqrDetail(containerEl, pqrId) {
         <section class="pqr-detail">
             <div class="pqr-loading">
                 <div class="pqr-loading__spinner"></div>
-                <p>Cargando PQR...</p>
+                <p>Cargando PQR real...</p>
             </div>
         </section>
     `;
 
     let pqr;
     try {
-        pqr = await pqrsMockService.getById(pqrId);
+        pqr = await getPqrDetails(pqrId);
     } catch (e) {
+        console.error(e);
         containerEl.innerHTML = `
             <section class="pqr-detail">
                 <div class="pqr-empty">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-                    <p>${e.message}</p>
+                    <p>Error: ${e.message}</p>
                 </div>
             </section>
         `;
@@ -255,9 +283,10 @@ export async function renderPqrDetail(containerEl, pqrId) {
         btn.disabled = true;
         btn.textContent = 'Confirmando...';
         try {
-            await pqrsMockService.confirmarClasificacion(pqr.id, pqr.tipo);
+            await pqrsListService.confirm(pqr.radicado, pqr.tipo);
             showToast('✓ Clasificación confirmada exitosamente', 'success');
-        } catch {
+        } catch (e) {
+            console.error(e);
             showToast('Error al confirmar clasificación', 'error');
         } finally {
             btn.disabled = false;
@@ -272,7 +301,8 @@ export async function renderPqrDetail(containerEl, pqrId) {
     document.getElementById('btn-ver-respuesta')?.addEventListener('click', () => {
         const textarea = document.getElementById('pqr-response-textarea');
         if (textarea) {
-            textarea.value = `[Basado en ${pqr.precedente.id}]\n${pqr.precedente.resumen}`;
+            const analisis = pqr.analisis_ia || {};
+            textarea.value = `[Basado en Precedente Sugerido]\nRespuesta estándar para solicitudes de ${analisis.secretaria_asignada || 'competencia general'}.`;
             textarea.focus();
         }
     });
@@ -283,14 +313,20 @@ export async function renderPqrDetail(containerEl, pqrId) {
         const texto = textarea?.value || '';
         const btn = document.getElementById('btn-enviar-respuesta');
 
+        if (!texto.trim()) {
+            showToast('La respuesta no puede estar vacía', 'error');
+            return;
+        }
+
         btn.disabled = true;
         btn.textContent = 'Enviando...';
 
         try {
-            await pqrsMockService.enviarRespuesta(pqr.id, texto);
+            await pqrsListService.sendResponse(pqr.radicado, texto);
             showToast('✓ Respuesta enviada exitosamente', 'success');
             if (textarea) textarea.value = '';
         } catch (e) {
+            console.error(e);
             showToast(e.message || 'Error al enviar respuesta', 'error');
         } finally {
             btn.disabled = false;

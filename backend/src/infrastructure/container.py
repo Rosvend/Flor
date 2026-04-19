@@ -1,6 +1,11 @@
 import logging
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Cargar variables de entorno lo antes posible usando ruta absoluta
+env_path = Path(__file__).resolve().parents[2] / ".env"
+load_dotenv(dotenv_path=env_path)
 
 from src.application.use_cases.ingest_curated_messages import IngestCuratedMessages
 from src.application.use_cases.ingest_knowledge_base_document import (
@@ -10,19 +15,10 @@ from src.application.use_cases.ingest_raw_messages import IngestRawMessages
 from src.application.use_cases.query_flor_chatbot import QueryFlorChatbot
 from src.infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.auth.jwt_token_generator import JwtTokenGenerator
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
 from src.infrastructure.knowledge_base.chroma_knowledge_base import ChromaKnowledgeBase
 from src.infrastructure.knowledge_base.document_ingestion_service import (
     DocumentIngestionService,
 )
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 from src.infrastructure.persistence.in_memory_raw_data_lake import InMemoryRawDataLake
 from src.infrastructure.persistence.in_memory_user_repository import InMemoryUserRepository
 
@@ -32,11 +28,38 @@ logger = logging.getLogger(__name__)
 if os.getenv("DATABASE_URL"):
     from src.infrastructure.persistence.database import init_db
     from src.infrastructure.persistence.postgres_user_repository import PostgresUserRepository
-    init_db()
-    user_repository = PostgresUserRepository()
+    try:
+        logger.info("Conectando a base de datos PostgreSQL...")
+        init_db()
+        user_repository = PostgresUserRepository()
+        logger.info("Conexión exitosa. Usando PostgresUserRepository.")
+    except Exception as e:
+        logger.error(f"Error al conectar a PostgreSQL: {e}")
+        logger.warning("Fallo en la base de datos funcional. Cayendo en modo IN-MEMORY (VOLÁTIL) para permitir desarrollo.")
+        from src.infrastructure.persistence.in_memory_user_repository import InMemoryUserRepository
+        user_repository = InMemoryUserRepository()
+        # Seed user for development
+        from src.domain.entities.user import User
+        user_repository.save(User(
+            id="admin-uuid",
+            nombre="Admin Flor (Fallback)",
+            correo_electronico="admin@flor.com",
+            password_hash=BcryptPasswordHasher().hash("admin123"),
+            organization_id=1
+        ))
 else:
     from src.infrastructure.persistence.in_memory_user_repository import InMemoryUserRepository
+    logger.warning("DATABASE_URL no configurada. Usando repositorio en memoria (VOLÁTIL)")
     user_repository = InMemoryUserRepository()
+    # Seed user for development
+    from src.domain.entities.user import User
+    user_repository.save(User(
+        id="admin-uuid",
+        nombre="Admin Flor",
+        correo_electronico="admin@flor.com",
+        password_hash=BcryptPasswordHasher().hash("admin123"),
+        organization_id=1
+    ))
 password_hasher = BcryptPasswordHasher()
 token_generator = JwtTokenGenerator()
 
@@ -101,12 +124,16 @@ def _get_router():
     global _router
     global _department_repo
     if _router is None:
-        from src.infrastructure.knowledge_base.json_department_repository import JsonDepartmentRepository
         from src.infrastructure.analysis.semantic_router import SemanticDepartmentRouter
 
         if _department_repo is None:
-            seed_path = Path(__file__).parent / "knowledge_base" / "data" / "departments.json"
-            _department_repo = JsonDepartmentRepository(seed_path)
+            if os.getenv("DATABASE_URL"):
+                from src.infrastructure.knowledge_base.postgres_department_repository import PostgresDepartmentRepository
+                _department_repo = PostgresDepartmentRepository()
+            else:
+                from src.infrastructure.knowledge_base.json_department_repository import JsonDepartmentRepository
+                seed_path = Path(__file__).parent / "knowledge_base" / "data" / "departments.json"
+                _department_repo = JsonDepartmentRepository(seed_path)
 
         _router = SemanticDepartmentRouter(repository=_department_repo)
     return _router

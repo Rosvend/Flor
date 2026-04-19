@@ -32,6 +32,16 @@ def init_db() -> None:
         organization_id INTEGER NOT NULL DEFAULT 1,
         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS departments (
+        id          VARCHAR(100) PRIMARY KEY,
+        name        TEXT NOT NULL,
+        type        VARCHAR(50), 
+        aliases     TEXT[],      
+        scope       TEXT,        
+        parent_id   VARCHAR(100) REFERENCES departments(id),
+        contact     JSONB DEFAULT '{}'::jsonb
+    );
     """
     with get_engine().begin() as conn:
         conn.execute(text(ddl))

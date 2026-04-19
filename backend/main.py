@@ -1,5 +1,17 @@
+import logging
+from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
+
+# Configurar logging antes de cargar nada
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:     %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+# Cargar variables de entorno lo antes posible usando ruta absoluta
+env_path = Path(__file__).resolve().parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 import os
 

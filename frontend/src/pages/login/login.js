@@ -23,12 +23,12 @@ export function renderLogin() {
                         <div id="login-error" class="form-error-box hidden"></div>
                         <div class="form-group">
                             <label for="email" class="form-label form-label--required">Correo electrónico</label>
-                            <input type="email" id="email" class="form-input" placeholder="ejemplo@correo.com" required>
+                            <input type="email" id="email" class="form-input" placeholder="admin@flor.com" autocomplete="username" required>
                         </div>
                         
                         <div class="form-group">
                             <label for="password" class="form-label form-label--required">Contraseña</label>
-                            <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+                            <input type="password" id="password" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
                         </div>
                         
                         <div class="form-actions">

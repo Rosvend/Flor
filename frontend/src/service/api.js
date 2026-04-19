@@ -355,7 +355,7 @@ export const dashboardService = {
             // Simulated numbers for MVP
             return Promise.resolve({ active: 5, pending: 2 });
         }
-        return request('/pqrs/dashboard', { method: 'GET', requiresAuth: true });
+        return request('/pqrs/stats', { method: 'GET', requiresAuth: true });
     }
 };
 
@@ -364,13 +364,27 @@ export const pqrsListService = {
         if (USE_MOCK) {
             return mockPqrs.listActive();
         }
-        return request('/pqrs/active', { method: 'GET', requiresAuth: true });
+        return request('/pqrs/curated', { method: 'GET', requiresAuth: true });
     },
     async getDetail(id) {
         if (USE_MOCK) {
             return mockPqrs.getDetail(id);
         }
-        return request(`/pqrs/${id}`, { method: 'GET', requiresAuth: true });
+        return request(`/pqrs/curated/${id}`, { method: 'GET', requiresAuth: true });
+    },
+    async confirm(id, tipo) {
+        return request(`/pqrs/curated/${id}`, {
+            method: 'PATCH',
+            requiresAuth: true,
+            data: { tipo_confirmado: tipo, estado: 'PROCESANDO' }
+        });
+    },
+    async sendResponse(id, texto) {
+        return request(`/pqrs/curated/${id}`, {
+            method: 'PATCH',
+            requiresAuth: true,
+            data: { respuesta_funcionario: texto, estado: 'CERRADO' }
+        });
     }
 };
 

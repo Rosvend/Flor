@@ -74,3 +74,26 @@ class S3CuratedDataLake(CuratedDataLakePort):
             Body=json.dumps(record, ensure_ascii=False),
             ContentType="application/json",
         )
+
+    def get_all(self) -> list[dict]:
+        records = []
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self._bucket, Prefix=self._prefix):
+            if "Contents" not in page:
+                continue
+            for obj in page["Contents"]:
+                if obj["Key"].endswith(".json"):
+                    res = self._client.get_object(Bucket=self._bucket, Key=obj["Key"])
+                    records.append(json.loads(res["Body"].read().decode("utf-8")))
+        return records
+
+    def get_by_radicado(self, radicado: str) -> dict | None:
+        # In this simple implementation, we might need to scan if we don't have an index.
+        # However, we can also store by radicado in the key to make it O(1).
+        # For now, let's scan all or assume get_all is called and filtered by the caller.
+        # Optimized version:
+        all_records = self.get_all()
+        for r in all_records:
+            if r.get("radicado") == radicado:
+                return r
+        return None

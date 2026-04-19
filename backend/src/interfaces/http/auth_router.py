@@ -6,6 +6,8 @@ from src.application.dtos.auth_dtos import LoginInput
 from src.application.use_cases.login_user import InvalidCredentialsError, LoginUser
 from src.infrastructure.auth.jwt_token_generator import InvalidTokenError
 from src.infrastructure.container import password_hasher, token_generator, user_repository
+from src.interfaces.http.deps import get_current_user, _bearer
+from src.domain.entities.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -52,16 +54,7 @@ def login(req: LoginRequest):
 
 
 @router.get("/me", response_model=MeResponse)
-def me(credentials: HTTPAuthorizationCredentials = Depends(_bearer)):
-    try:
-        payload = token_generator.decode(credentials.credentials)
-    except InvalidTokenError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido o expirado")
-
-    user = user_repository.find_by_id(payload["sub"])
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
-
+def me(user: User = Depends(get_current_user)):
     return MeResponse(
         user_id=user.id,
         nombre=user.nombre,

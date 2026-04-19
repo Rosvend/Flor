@@ -21,3 +21,12 @@ class InMemoryCuratedDataLake(CuratedDataLakePort):
 
     def update(self, key: str, record: dict) -> None:
         self._store[key] = record
+
+    def get_all(self) -> list[dict]:
+        return list(self._store.values())
+
+    def get_by_radicado(self, radicado: str) -> dict | None:
+        for r in self._store.values():
+            if r.get("radicado") == radicado:
+                return r
+        return None
