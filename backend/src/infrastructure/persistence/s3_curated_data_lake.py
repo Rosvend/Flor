@@ -21,11 +21,41 @@ class S3CuratedDataLake(CuratedDataLakePort):
             config=Config(connect_timeout=5, read_timeout=10, retries={"max_attempts": 1}),
         )
 
+    def _get_next_id_and_increment(self, count: int) -> int:
+        if count <= 0:
+            return 1
+        counter_key = f"{self._prefix}_metadata/counter.txt"
+        try:
+            response = self._client.get_object(Bucket=self._bucket, Key=counter_key)
+            current_id = int(response["Body"].read().decode("utf-8").strip())
+        except Exception:
+            current_id = 0
+
+        next_id = current_id + 1
+        new_max_id = current_id + count
+
+        try:
+            self._client.put_object(
+                Bucket=self._bucket,
+                Key=counter_key,
+                Body=str(new_max_id),
+                ContentType="text/plain",
+            )
+        except Exception as e:
+            print(f"Error updating counter: {e}")
+
+        return next_id
+
     def store(self, records: list[dict]) -> list[str]:
         date_prefix = datetime.now(timezone.utc).strftime("%Y/%m/%d")
         keys: list[str] = []
 
-        for record in records:
+        start_id = self._get_next_id_and_increment(len(records))
+
+        for i, record in enumerate(records):
+            if "id" not in record or record["id"] is None:
+                record["id"] = start_id + i
+                
             key = f"{self._prefix}{date_prefix}/{uuid.uuid4()}.json"
             self._client.put_object(
                 Bucket=self._bucket,

@@ -24,6 +24,7 @@ class CuratedMetadata(BaseModel):
 
 
 class CuratedRecord(BaseModel):
+    id: int | None = None
     radicado: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp_radicacion: str = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()

@@ -37,8 +37,8 @@ class S3RawDataLake(RawDataLakePort):
 
         return keys
 
-    def get_all(self) -> list[dict]:
-        records: list[dict] = []
+    def get_all(self) -> dict[str, dict]:
+        records: dict[str, dict] = {}
         try:
             paginator = self._client.get_paginator("list_objects_v2")
             for page in paginator.paginate(Bucket=self._bucket, Prefix=self._prefix):
@@ -52,8 +52,14 @@ class S3RawDataLake(RawDataLakePort):
                     response = self._client.get_object(Bucket=self._bucket, Key=obj["Key"])
                     content = response["Body"].read().decode("utf-8")
                     data = json.loads(content)
-                    records.append(data)
+                    records[obj["Key"]] = data
         except Exception as e:
             print(f"Error recuperando datos de S3: {e}")
             
         return records
+
+    def delete(self, key: str) -> None:
+        try:
+            self._client.delete_object(Bucket=self._bucket, Key=key)
+        except Exception as e:
+            print(f"Error borrando de S3: {e}")

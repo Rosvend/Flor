@@ -16,7 +16,8 @@ class ClusterPQRS:
 
     def execute(self, pqrs_records: list[dict] = None) -> ClusterPQRSOutput:
         if pqrs_records is None:
-            pqrs_records = self._data_lake.get_all()
+            raw_data = self._data_lake.get_all()
+            pqrs_records = list(raw_data.values()) if isinstance(raw_data, dict) else raw_data
 
         if len(pqrs_records) < 2:
             return ClusterPQRSOutput(

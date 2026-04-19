@@ -92,6 +92,16 @@ def get_process_pqrs() -> ProcessPQRS:
     )
 
 
+def get_migrate_raw_to_curated():
+    from src.application.use_cases.migrate_raw_to_curated import MigrateRawToCurated
+    return MigrateRawToCurated(
+        raw_data_lake=raw_data_lake,
+        curated_data_lake=curated_data_lake,
+        classifier=_get_classifier(),
+        ingest_curated=ingest_curated_messages
+    )
+
+
 cluster_pqrs = ClusterPQRS(
     similarity_analyzer=similarity_analyzer,
     data_lake=raw_data_lake,

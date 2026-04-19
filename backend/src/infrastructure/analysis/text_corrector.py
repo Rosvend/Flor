@@ -17,7 +17,7 @@ class GeminiTextCorrector(TextCorrectorPort):
         self._model = self._find_model()
 
     def _find_model(self) -> str:
-        preferred = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-pro"]
+        preferred = ["gemini-1.5-flash"]
         try:
             available = [
                 m.name.replace("models/", "")

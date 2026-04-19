@@ -30,3 +30,24 @@ class HuggingFaceZeroShotClassifier(PQRSClassifierPort):
         except Exception as e:
             print(f"Error clasificando PQRS: {e}")
             return "petición"
+
+    def is_pqrs(self, text: str) -> bool:
+        if not text or len(text.strip()) < 10:
+            return False
+            
+        try:
+            truncated_text = text[:1000]
+            categories = ["Petición ciudadana", "Queja o reclamo", "Denuncia", "Saludo o conversación casual", "Spam o irrelevante"]
+            result = self._classifier(
+                truncated_text,
+                candidate_labels=categories,
+                hypothesis_template="Este texto es sobre {}."
+            )
+            top_label = result["labels"][0]
+            # Consideramos que es una PQRSD si el modelo le da mayor probabilidad a las primeras 3
+            if top_label in ["Petición ciudadana", "Queja o reclamo", "Denuncia"]:
+                return True
+            return False
+        except Exception as e:
+            print(f"Error detectando si es PQRS: {e}")
+            return False

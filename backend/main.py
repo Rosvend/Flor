@@ -7,6 +7,7 @@ from src.interfaces.http.auth_router import router as auth_router
 from src.interfaces.http.ingest_router import router as ingest_router
 from src.interfaces.http.ingest_curated_router import router as ingest_curated_router
 from src.interfaces.http.pqrs_router import router as pqrs_router
+from src.interfaces.http.migration_router import router as migration_router
 from src.infrastructure.container import user_repository, password_hasher                                                                                                             
 from src.domain.entities.user import User
 
@@ -16,6 +17,7 @@ app.include_router(ingest_router, prefix="/api/v1")
 app.include_router(ingest_curated_router, prefix="/api/v1")
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(pqrs_router, prefix="/api/v1")
+app.include_router(migration_router, prefix="/api/v1")
 
 
 @app.get("/health")

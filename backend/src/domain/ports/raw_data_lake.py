@@ -7,5 +7,9 @@ class RawDataLakePort(ABC):
         """Persists raw records and returns their storage keys."""
 
     @abstractmethod
-    def get_all(self) -> list[dict]:
+    def get_all(self) -> dict[str, dict]:
         """Retrieves all stored raw records."""
+
+    @abstractmethod
+    def delete(self, key: str) -> None:
+        """Deletes a raw record by its storage key."""
