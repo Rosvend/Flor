@@ -11,84 +11,77 @@ import os
 from datetime import datetime, timedelta, timezone
 
 import httpx
+from dotenv import load_dotenv
 
-GRAPH_BASE = "https://graph.facebook.com/v19.0"
+load_dotenv()
 
-MOCK_DMS = [
-    {
-        "canal": "FB_DM",
-        "usuario": {"nombre": "Pedro Gomez", "id_meta": "fb_001"},
-        "contenido": "Buenos días, quiero interponer una queja formal por el mal servicio de agua",
-        "metadata": {"post_id": None, "created_time": "2026-04-18T07:30:00+0000"},
-    },
-    {
-        "canal": "FB_DM",
-        "usuario": {"nombre": "Ana Lucia Torres", "id_meta": "fb_002"},
-        "contenido": "¿Cuándo abren las inscripciones para el programa de vivienda?",
-        "metadata": {"post_id": None, "created_time": "2026-04-18T09:45:00+0000"},
-    },
-    {
-        "canal": "FB_DM",
-        "usuario": {"nombre": None, "id_meta": "fb_003"},
-        "contenido": "Denuncia: están construyendo sin permiso en el lote de la esquina",
-        "metadata": {"post_id": None, "created_time": "2026-04-18T13:00:00+0000"},
-    },
-]
+GRAPH_BASE = "https://graph.facebook.com/v25.0"
 
 
-def _window() -> tuple[int, int]:
+def _window() -> tuple[datetime, datetime]:
     now = datetime.now(timezone.utc)
-    since = int((now - timedelta(hours=24)).timestamp())
-    until = int(now.timestamp())
-    return since, until
+    return now - timedelta(hours=24), now
 
 
 def fetch_dms(session: httpx.Client, page_id: str, access_token: str) -> list[dict]:
-    since, until = _window()
-    url = f"{GRAPH_BASE}/me/conversations"
+    since_dt, _ = _window()
+    url = f"{GRAPH_BASE}/{page_id}/conversations"
     params = {
         "fields": "messages{message,from,created_time}",
-        "since": since,
-        "until": until,
         "access_token": access_token,
     }
-    resp = session.get(url, params=params, timeout=30)
-    resp.raise_for_status()
 
     items = []
-    for conv in resp.json().get("data", []):
-        for msg in conv.get("messages", {}).get("data", []):
-            from_field = msg.get("from", {})
-            # skip messages sent by the page itself
-            if from_field.get("id") == page_id:
-                continue
-            items.append({
-                "canal": "FB_DM",
-                "usuario": {
-                    "nombre": from_field.get("name"),
-                    "id_meta": from_field.get("id", "unknown"),
-                },
-                "contenido": msg.get("message", ""),
-                "metadata": {
-                    "post_id": None,
-                    "created_time": msg.get("created_time"),
-                },
-            })
+    while url:
+        resp = session.get(url, params=params, timeout=30)
+        if not resp.is_success:
+            print(f"  [facebook] Error {resp.status_code}: {resp.text}")
+        resp.raise_for_status()
+        data = resp.json()
+
+        for conv in data.get("data", []):
+            for msg in conv.get("messages", {}).get("data", []):
+                created_time = msg.get("created_time", "")
+                try:
+                    msg_dt = datetime.fromisoformat(created_time.replace("Z", "+00:00"))
+                except ValueError:
+                    continue
+                if msg_dt < since_dt:
+                    continue
+
+                from_field = msg.get("from", {})
+                if from_field.get("id") == page_id:
+                    continue
+
+                items.append({
+                    "canal": "FB_DM",
+                    "usuario": {
+                        "nombre": from_field.get("name"),
+                        "id_meta": from_field.get("id", "unknown"),
+                    },
+                    "contenido": msg.get("message", ""),
+                    "metadata": {
+                        "created_time": created_time,
+                    },
+                })
+
+        url = data.get("paging", {}).get("next")
+        params = {}
+
     return items
 
 
-def run(mock: bool = False) -> list[dict]:
-    if mock:
-        print(f"  [facebook]  MOCK — {len(MOCK_DMS)} DMs")
-        return MOCK_DMS
-
+def run() -> list[dict]:
     page_id = os.getenv("FB_PAGE_ID", "")
     access_token = os.getenv("FB_PAGE_ACCESS_TOKEN", "")
+
     if not page_id or not access_token:
-        raise EnvironmentError("FB_PAGE_ID and FB_PAGE_ACCESS_TOKEN must be set in .env")
+        raise EnvironmentError(
+            "FB_PAGE_ID y FB_PAGE_ACCESS_TOKEN deben estar seteados en el .env"
+        )
 
     with httpx.Client() as session:
         dms = fetch_dms(session, page_id, access_token)
 
-    print(f"  [facebook]  {len(dms)} DMs")
+    print(f"  [facebook] {len(dms)} DMs fetched")
     return dms
