@@ -30,18 +30,21 @@ class GeminiGenerationAdapter(GenerationPort):
         self._temperature = temperature
 
     def generate(self, system: str, user: str, max_tokens: int = 512) -> str:
+        config_kwargs: dict = {
+            "system_instruction": system,
+            "temperature": self._temperature,
+            "max_output_tokens": max_tokens,
+        }
+        # thinking_config is only supported on the Gemini 2.5 series. Sending it
+        # to gemini-2.0-*, gemini-1.5-*, or other models raises a 400. Gate it.
+        if self._model.startswith("gemini-2.5"):
+            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+
         try:
             response = self._client.models.generate_content(
                 model=self._model,
                 contents=user,
-                config=types.GenerateContentConfig(
-                    system_instruction=system,
-                    temperature=self._temperature,
-                    max_output_tokens=max_tokens,
-                    # gemini-2.5-flash spends output tokens on internal reasoning by default;
-                    # disable it so the full budget goes to the user-facing reply.
-                    thinking_config=types.ThinkingConfig(thinking_budget=0),
-                ),
+                config=types.GenerateContentConfig(**config_kwargs),
             )
         except Exception as exc:
             logger.exception("Gemini generation failed: %s", exc)
