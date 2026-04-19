@@ -286,6 +286,17 @@ export const authService = {
     },
 }
 
+// ─── Aplicacion Service ──────────────────────────────────────────────
+
+export const aplicacionService = {
+    async getAplicaciones() {
+        return await request('/aplicaciones', { method: 'GET', requiresAuth: true });
+    },
+    async createAplicacion(data) {
+        return await request('/aplicaciones', { method: 'POST', data, requiresAuth: true });
+    }
+};
+
 // ─── PQRS Service ──────────────────────────────────────────────
 
 export const pqrsService = {
@@ -320,3 +331,34 @@ export const chatbotService = {
         }
     }
 }
+
+// ─── Aplicación Dashboard & PQRS Services ────────────────────────
+export const dashboardService = {
+    async getStats() {
+        if (USE_MOCK) {
+            // Simulated numbers for MVP
+            return Promise.resolve({ active: 5, pending: 2 });
+        }
+        return request('/pqrs/dashboard', { method: 'GET', requiresAuth: true });
+    }
+};
+
+export const pqrsListService = {
+    async listActive() {
+        if (USE_MOCK) {
+            return mockPqrs.listActive();
+        }
+        return request('/pqrs/active', { method: 'GET', requiresAuth: true });
+    },
+    async getDetail(id) {
+        if (USE_MOCK) {
+            return mockPqrs.getDetail(id);
+        }
+        return request(`/pqrs/${id}`, { method: 'GET', requiresAuth: true });
+    }
+};
+
+// Exported helpers used by aplicacion page
+export const getDashboardData = dashboardService.getStats;
+export const getActivePqrs = pqrsListService.listActive;
+export const getPqrDetails = pqrsListService.getDetail;
