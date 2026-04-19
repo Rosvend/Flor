@@ -39,6 +39,14 @@ function getTipoLabel(tipo) {
     return TIPO_PQRS[tipo?.toUpperCase()]?.label || tipo;
 }
 
+// Keeps user-authored text safe inside a <textarea> element.
+function escapeTextarea(s) {
+    return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 /* ── Renderizado del HTML ────────────────────────────────────────── */
 
 function buildDetailHTML(pqr) {
@@ -51,12 +59,22 @@ function buildDetailHTML(pqr) {
         : 'Facebook/Meta';
 
     const analisis = pqr.analisis_ia || {};
-    
-    // Mapeo de capas
+    const resumenIA = pqr.resumen_ia || null; // F5 summary
+    const borrador = pqr.borrador_respuesta || null; // F5 draft
+
+    // The raw citizen text can live under either field depending on ingest path.
+    const originalText = pqr.contenido || pqr.descripcion_detallada || '';
+
+    // F5 summary takes precedence over the older classification `analisis_ia` for the
+    // first two layers; we fall back to the older fields so existing records still render.
     const capas = {
-        solicitudConcreta: analisis.texto_mejorado || 'Pendiente de análisis...',
-        tematicas: analisis.tipo_sugerido ? [analisis.tipo_sugerido, analisis.secretaria_asignada] : ['General'],
-        textoOriginal: pqr.contenido
+        solicitudConcreta: resumenIA?.lead
+            || analisis.texto_mejorado
+            || 'Aún no se ha generado el resumen. Usa "Generar resumen" abajo.',
+        tematicas: (resumenIA?.topics && resumenIA.topics.length)
+            ? resumenIA.topics
+            : (analisis.tipo_sugerido ? [analisis.tipo_sugerido, analisis.secretaria_asignada].filter(Boolean) : ['General']),
+        textoOriginal: originalText || '(sin texto)'
     };
 
     const tematicasHTML = capas.tematicas
@@ -158,6 +176,34 @@ function buildDetailHTML(pqr) {
 
             </div>
 
+            <!-- F5 — Acciones IA (resumen + borrador) -->
+            <div class="pqr-f5-actions" aria-label="Acciones asistidas por IA">
+                <button class="btn--ia" id="btn-generar-resumen" type="button" aria-label="Generar resumen con IA">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 12h14"/></svg>
+                    ${resumenIA ? 'Regenerar resumen' : 'Generar resumen'}
+                </button>
+                <button class="btn--ia" id="btn-generar-borrador" type="button" aria-label="Generar borrador con IA">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    ${borrador ? 'Regenerar borrador' : 'Generar borrador de respuesta'}
+                </button>
+                <span class="pqr-f5-note">El borrador requiere aprobación del asesor jurídico antes de enviarse.</span>
+            </div>
+
+            <!-- Fuentes del borrador (F5) -->
+            <div class="pqr-f5-sources" id="pqr-f5-sources" ${borrador?.sources?.length ? '' : 'hidden'}>
+                <details>
+                    <summary>Fuentes citadas (${borrador?.sources?.length || 0})</summary>
+                    <div class="pqr-f5-sources__list">
+                        ${(borrador?.sources || []).map(s => `
+                            <div class="pqr-f5-source">
+                                <div class="pqr-f5-source__title">${s.title}</div>
+                                <div class="pqr-f5-source__excerpt">${s.excerpt}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
+            </div>
+
             <!-- Área de respuesta -->
             <div class="pqr-detail__response-area">
                 <div class="pqr-response-textarea-wrapper">
@@ -167,7 +213,7 @@ function buildDetailHTML(pqr) {
                         rows="2"
                         placeholder="Escribe tu respuesta o usa el precedente sugerido..."
                         aria-label="Campo de respuesta"
-                    ></textarea>
+                    >${borrador?.draft ? escapeTextarea(borrador.draft) : ''}</textarea>
                     <div class="pqr-response-actions">
                         <button class="pqr-response-tool-btn" aria-label="Adjuntar archivo" title="Adjuntar">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -340,6 +386,99 @@ export async function renderPqrDetail(containerEl, pqrId) {
         }
     });
 
+    // F5 — Generar resumen (capas 1 y 2)
+    document.getElementById('btn-generar-resumen')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btn-generar-resumen');
+        const force = Boolean(pqr.resumen_ia);
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.textContent = force ? 'Regenerando...' : 'Generando resumen...';
+        try {
+            const res = await pqrsListService.summarize(pqr.radicado, { force });
+            const resumen = res?.resumen_ia;
+            if (!resumen) throw new Error('Respuesta sin resumen');
+
+            // Update in-memory model and re-render the two layer cards.
+            pqr.resumen_ia = resumen;
+            const leadEl = document.querySelector('.pqr-capa-card:nth-of-type(1) .pqr-capa-card__texto');
+            if (leadEl) leadEl.textContent = resumen.lead || '';
+            const tematicasEl = document.getElementById('tematicas-container');
+            if (tematicasEl) {
+                const addBtn = tematicasEl.querySelector('.pqr-tematica-add');
+                tematicasEl.querySelectorAll('.pqr-tematica-tag').forEach(t => t.remove());
+                (resumen.topics || []).forEach(t => {
+                    const span = document.createElement('span');
+                    span.className = 'pqr-tematica-tag';
+                    span.textContent = t;
+                    tematicasEl.insertBefore(span, addBtn);
+                });
+            }
+            showToast(res.cached ? 'Resumen ya existente' : '✓ Resumen generado', 'success');
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 12h14"/></svg>
+                Regenerar resumen
+            `;
+        } catch (e) {
+            console.error(e);
+            showToast(e.message || 'No se pudo generar el resumen', 'error');
+            btn.innerHTML = originalHTML;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // F5 — Generar borrador de respuesta (RAG)
+    document.getElementById('btn-generar-borrador')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btn-generar-borrador');
+        const force = Boolean(pqr.borrador_respuesta);
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.textContent = force ? 'Regenerando...' : 'Generando borrador...';
+        try {
+            const res = await pqrsListService.draftResponse(pqr.radicado, { force });
+            const borrador = res?.borrador_respuesta;
+            if (!borrador?.draft) throw new Error('Respuesta sin borrador');
+
+            pqr.borrador_respuesta = borrador;
+            const textarea = document.getElementById('pqr-response-textarea');
+            if (textarea) {
+                textarea.value = borrador.draft;
+                textarea.style.height = 'auto';
+                textarea.style.height = `${Math.min(textarea.scrollHeight, 400)}px`;
+                textarea.focus();
+            }
+
+            // Re-populate the sources disclosure.
+            const srcWrap = document.getElementById('pqr-f5-sources');
+            if (srcWrap) {
+                const sources = borrador.sources || [];
+                const list = srcWrap.querySelector('.pqr-f5-sources__list');
+                const summary = srcWrap.querySelector('summary');
+                if (list) {
+                    list.innerHTML = sources.map(s => `
+                        <div class="pqr-f5-source">
+                            <div class="pqr-f5-source__title">${s.title}</div>
+                            <div class="pqr-f5-source__excerpt">${s.excerpt}</div>
+                        </div>
+                    `).join('');
+                }
+                if (summary) summary.textContent = `Fuentes citadas (${sources.length})`;
+                srcWrap.hidden = sources.length === 0;
+            }
+
+            showToast(res.cached ? 'Borrador ya existente' : '✓ Borrador generado', 'success');
+            btn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                Regenerar borrador
+            `;
+        } catch (e) {
+            console.error(e);
+            showToast(e.message || 'No se pudo generar el borrador', 'error');
+            btn.innerHTML = originalHTML;
+        } finally {
+            btn.disabled = false;
+        }
+    });
     // Enviar respuesta
     document.getElementById('btn-enviar-respuesta')?.addEventListener('click', async () => {
         const textarea = document.getElementById('pqr-response-textarea');

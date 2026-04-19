@@ -135,3 +135,31 @@ class S3CuratedDataLake(CuratedDataLakePort):
             if r.get("radicado") == radicado:
                 return r
         return None
+
+    def update_by_radicado(self, radicado: str, patch: dict) -> dict | None:
+        # Scan the bucket to find the key whose body matches the radicado, then
+        # shallow-merge the patch and put it back. We intentionally bypass the
+        # get_all cache because we need the S3 key, not just the record body.
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self._bucket, Prefix=self._prefix):
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                if not key.endswith(".json"):
+                    continue
+                try:
+                    res = self._client.get_object(Bucket=self._bucket, Key=key)
+                    record = json.loads(res["Body"].read().decode("utf-8"))
+                except Exception:
+                    continue
+                if record.get("radicado") != radicado:
+                    continue
+                record.update(patch)
+                self._client.put_object(
+                    Bucket=self._bucket,
+                    Key=key,
+                    Body=json.dumps(record, ensure_ascii=False),
+                    ContentType="application/json",
+                )
+                self._cache_time = 0
+                return record
+        return None

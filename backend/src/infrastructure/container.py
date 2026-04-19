@@ -13,6 +13,8 @@ from src.application.use_cases.ingest_knowledge_base_document import (
 )
 from src.application.use_cases.ingest_raw_messages import IngestRawMessages
 from src.application.use_cases.query_flor_chatbot import QueryFlorChatbot
+from src.application.use_cases.summarize_pqrsd import SummarizePQRSD
+from src.application.use_cases.draft_response_pqrsd import DraftResponsePQRSD
 from src.infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.auth.jwt_token_generator import JwtTokenGenerator
 from src.infrastructure.knowledge_base.chroma_knowledge_base import ChromaKnowledgeBase
@@ -164,6 +166,8 @@ ingest_knowledge_base_document = IngestKnowledgeBaseDocument(
 )
 
 query_flor_chatbot: QueryFlorChatbot | None = None
+summarize_pqrsd: SummarizePQRSD | None = None
+draft_response_pqrsd: DraftResponsePQRSD | None = None
 if os.getenv("GEMINI_API_KEY"):
     from src.infrastructure.classification.gemini_generation_adapter import (
         GeminiGenerationAdapter,
@@ -179,5 +183,12 @@ if os.getenv("GEMINI_API_KEY"):
         top_k=int(os.getenv("CHATBOT_TOP_K", "5")),
         min_similarity=float(os.getenv("CHATBOT_MIN_SIMILARITY", "0.55")),
     )
+    summarize_pqrsd = SummarizePQRSD(generation=_generation)
+    draft_response_pqrsd = DraftResponsePQRSD(
+        knowledge_base=knowledge_base,
+        generation=_generation,
+        top_k=int(os.getenv("DRAFT_TOP_K", "6")),
+        min_similarity=float(os.getenv("DRAFT_MIN_SIMILARITY", "0.55")),
+    )
 else:
-    logger.warning("GEMINI_API_KEY not set — chatbot endpoint will return 503.")
+    logger.warning("GEMINI_API_KEY not set — chatbot, summarize and draft endpoints will return 503.")
