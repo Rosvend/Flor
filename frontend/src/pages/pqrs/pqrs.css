@@ -1,0 +1,166 @@
+/* =========================================
+   PQRS PAGE STYLES
+   ========================================= */
+
+.pqrs-main {
+    padding-top: var(--space-6);
+    padding-bottom: var(--space-10);
+}
+
+.pqrs-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.pqrs-card {
+    padding: var(--space-6);
+    background-color: var(--color-surface);
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+}
+
+/* Sections */
+.form-section {
+    background: var(--color-surface-2);
+    border-radius: 12px;
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+    border: 1px solid var(--color-border);
+}
+
+.section-title {
+    font-size: var(--text-lg);
+    color: var(--color-tertiary);
+    margin-bottom: var(--space-4);
+    border-bottom: 2px solid var(--color-border);
+    padding-bottom: var(--space-2);
+}
+
+/* Grid Layout */
+.grid-2-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+}
+
+@media (max-width: 768px) {
+    .grid-2-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Toggle Anónimo */
+.anonimo-toggle-wrapper {
+    background-color: #e5f3fb; /* very light blue */
+    padding: var(--space-4);
+    border-radius: 12px;
+    border-left: 4px solid var(--color-primary);
+}
+
+/* The switch - the box around the slider */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+.switch input { 
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--color-primary);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--color-primary);
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+.form-file {
+    padding: 8px;
+    background: #fff;
+}
+
+/* Success Screen */
+.pqrs-success-card {
+    padding: var(--space-8);
+    text-align: center;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+}
+
+.success-icon {
+    width: 100px;
+    height: 100px;
+    background-color: #e5f3fb;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.radicado-box {
+    background-color: var(--color-surface-2);
+    padding: var(--space-4);
+    border-radius: 12px;
+    display: inline-block;
+    min-width: 300px;
+    border: 2px dashed var(--color-border-strong);
+}
+
+.form-error-box {
+    background-color: #ffebee;
+    color: var(--color-danger);
+    padding: var(--space-3);
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--color-danger);
+    font-weight: 600;
+}
