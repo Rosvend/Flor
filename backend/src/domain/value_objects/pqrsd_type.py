@@ -6,4 +6,4 @@ class PQRSDType(str, Enum):
     COMPLAINT = "QUEJA"
     CLAIM = "RECLAMO"
     SUGGESTION = "SUGERENCIA"
-    DOUBT = "DUDA"
+    DENUNCIA = "DENUNCIA"
