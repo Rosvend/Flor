@@ -24,6 +24,12 @@ dependencies = [
 
     # Datalake (S3 raw storage)
     "boto3==1.38.0",
+
+    # PQRS Analysis
+    "google-genai>=1.0.0",
+    "transformers>=4.40.0",
+    "torch>=2.0.0",
+    "scikit-learn>=1.4.0",
 ]
 
 [build-system]

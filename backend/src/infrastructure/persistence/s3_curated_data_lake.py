@@ -36,3 +36,11 @@ class S3CuratedDataLake(CuratedDataLakePort):
             keys.append(key)
 
         return keys
+
+    def update(self, key: str, record: dict) -> None:
+        self._client.put_object(
+            Bucket=self._bucket,
+            Key=key,
+            Body=json.dumps(record, ensure_ascii=False),
+            ContentType="application/json",
+        )

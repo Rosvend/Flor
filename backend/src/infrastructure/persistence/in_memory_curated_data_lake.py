@@ -14,3 +14,6 @@ class InMemoryCuratedDataLake(CuratedDataLakePort):
             self._store[key] = record
             keys.append(key)
         return keys
+
+    def update(self, key: str, record: dict) -> None:
+        self._store[key] = record
