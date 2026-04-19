@@ -55,9 +55,12 @@ class IngestEmailPQRS:
                 self._connector.mark_as_read(email['id'])
                 continue
 
-            # 3. Procesar con IA (Toxicidad, Sentimiento, Pre-Clasificación)
+            # 3. Procesar con IA (Toxicidad, Sentimiento, Pre-Clasificación, Visión)
             try:
-                ai_result = self._process_pqrs.execute(ProcessPQRSInput(text=text_to_analyze))
+                ai_result = self._process_pqrs.execute(ProcessPQRSInput(
+                    text=text_to_analyze,
+                    images=email.get('images', [])
+                ))
             except Exception as exc:
                 msg = str(exc)
                 if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
@@ -118,6 +121,7 @@ class IngestEmailPQRS:
                     "tipo_sugerido":      ai_result.tipo_sugerido,
                     "secretaria_asignada": ai_result.secretaria_asignada,
                     "texto_mejorado":     ai_result.improved_text,
+                    "objetos_detectados": ai_result.detected_objects,
                 },
                 # Pipeline fields — initially empty
                 "resumen_ia":           None,

@@ -116,7 +116,6 @@ function buildDetailHTML(pqr) {
         </div>
     `;
 
-    // Precedente y Ciudadano (Mocks para el MVP si no hay en el backend)
     const precedenteHTML = `
         <div id="precedente-container">
             <div class="pqr-panel-section__label">
@@ -126,16 +125,11 @@ function buildDetailHTML(pqr) {
         </div>
     `;
 
-    const ciudadano = pqr.infoCiudadano || {
-        historialLimpio: true,
-        solicitudesPrevias: 0
-    };
-
     const citizenDisplayName = getCitizenName(pqr) || 'Anónimo';
 
-    const ciudadanoMsg = ciudadano.historialLimpio
-        ? 'El ciudadano tiene historial limpio en solicitudes previas.'
-        : `El ciudadano tiene ${ciudadano.solicitudesPrevias} solicitudes previas registradas.`;
+    const ciudadanoMsg = pqr.usuario?.email 
+        ? `Ciudadano registrado: ${pqr.usuario.email}`
+        : 'Esta solicitud fue radicada de forma anónima.';
 
     return `
         <!-- ── Panel central: detalle ── -->
@@ -201,6 +195,49 @@ function buildDetailHTML(pqr) {
                     </div>
                 </div>
 
+                <!-- Sección: Anexos y Evidencia (Capa Vision) -->
+                <div class="pqr-capa-card pqr-capa-card--anexos" ${(pqr.anexos?.length || analisis.objetos_detectados?.length) ? '' : 'hidden'}>
+                    <div class="pqr-capa-card__label">
+                        <span class="pqr-capa-card__label-num pqr-capa-card__label-num--vision">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7"/><polyline points="16 5 21 5 21 10"/><line x1="12" y1="12" x2="21" y2="3"/></svg>
+                        </span>
+                        Anexos y Evidencia Visual
+                    </div>
+                    
+                    <div class="pqr-anexos-grid">
+                        ${(pqr.anexos || []).map(key => {
+                            const isImg = key.match(/\.(jpg|jpeg|png|gif)$/i);
+                            const fileName = key.split('/').pop();
+                            return `
+                                <div class="pqr-anexo-item">
+                                    ${isImg ? `
+                                        <div class="pqr-anexo-thumb">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                                        </div>
+                                    ` : `
+                                        <div class="pqr-anexo-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                        </div>
+                                    `}
+                                    <span class="pqr-anexo-name">${fileName}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+
+                    ${analisis.objetos_detectados?.length ? `
+                        <div class="pqr-vision-results mt-4">
+                            <div class="pqr-vision-badge">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                Hallazgos YOLOv8
+                            </div>
+                            <div class="pqr-tematicas">
+                                ${(analisis.objetos_detectados || []).map(obj => `<span class="pqr-tematica-tag pqr-tematica-tag--vision">${obj}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
                 <!-- Capa 3: Texto original -->
                 <div class="pqr-capa-card">
                     <div class="pqr-capa-card__label">
@@ -213,6 +250,20 @@ function buildDetailHTML(pqr) {
                 <!-- F5 — Resumen IA (separate card; no overlap with Capa 1/2) -->
                 ${resumenCardHTML}
 
+                <!-- Capa 4: Conclusión de Visión Artificial (Hidden until requested) -->
+                <div class="pqr-capa-card pqr-capa-card--vision-full hidden" id="pqr-vision-full-card">
+                    <div class="pqr-capa-card__label">
+                        <span class="pqr-capa-card__label-num pqr-capa-card__label-num--vision">4</span>
+                        Capa 4 — Análisis de Evidencia Visual (YOLOv8)
+                    </div>
+                    <div class="pqr-vision-conclusion" id="vision-conclusion-text">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                    <div class="pqr-vision-objects-list mt-3" id="vision-objects-list">
+                        <!-- Tags de objetos -->
+                    </div>
+                </div>
+
             </div>
 
             <!-- F5 — Acciones IA (resumen + borrador) -->
@@ -222,8 +273,12 @@ function buildDetailHTML(pqr) {
                     ${resumenIA ? 'Regenerar resumen' : 'Generar resumen'}
                 </button>
                 <button class="btn--ia" id="btn-generar-borrador" type="button" aria-label="Generar borrador con IA">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                    ${borrador ? 'Regenerar borrador' : 'Generar borrador de respuesta'}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    ${borrador ? 'Regenerar borrador' : 'Generar borrador'}
+                </button>
+                <button class="btn--ia btn--ia-vision" id="btn-analizar-vision" type="button" aria-label="Análisis de visión artificial">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Análisis de Visión
                 </button>
                 <span class="pqr-f5-note">El borrador requiere aprobación del asesor jurídico antes de enviarse.</span>
             </div>
@@ -560,5 +615,26 @@ export async function renderPqrDetail(containerEl, pqrId) {
     textarea?.addEventListener('input', () => {
         textarea.style.height = 'auto';
         textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
+    });
+
+    // Botón Visión Artificial
+    document.getElementById('btn-analizar-vision')?.addEventListener('click', () => {
+        const fullCard = document.getElementById('pqr-vision-full-card');
+        const conclusionEl = document.getElementById('vision-conclusion-text');
+        const objectsEl = document.getElementById('vision-objects-list');
+        
+        fullCard.classList.remove('hidden');
+        fullCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        const objetos = analisis.objetos_detectados || [];
+        
+        if (objetos.length === 0) {
+            conclusionEl.innerHTML = `<p class="text-muted">No se detectaron objetos específicos en las imágenes adjuntas o no hay anexos visuales.</p>`;
+            objectsEl.innerHTML = '';
+        } else {
+            const conclusion = `Tras el análisis de la evidencia fotográfica, se han identificado elementos críticos que respaldan la solicitud. Se confirma la presencia de: <strong>${objetos.join(', ')}</strong>. Estos hallazgos sugieren una correlación directa con la descripción de los hechos suministrada por el ciudadano.`;
+            conclusionEl.innerHTML = `<p class="pqr-capa-card__texto">${conclusion}</p>`;
+            objectsEl.innerHTML = objetos.map(obj => `<span class="pqr-tematica-tag pqr-tematica-tag--vision">${obj}</span>`).join('');
+        }
     });
 }

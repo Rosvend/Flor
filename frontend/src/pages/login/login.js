@@ -31,9 +31,6 @@ export function renderLogin() {
                             <input type="password" id="password" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
                         </div>
 
-                        <p class="text-secondary text-sm" style="margin-top: -0.5rem;">
-                            Usuario de prueba: demo@flor.local / Flor123!
-                        </p>
                         
                         <div class="form-actions">
                             <button type="submit" class="btn btn--accent btn--lg login-btn">Entrar</button>

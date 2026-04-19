@@ -651,3 +651,93 @@
     color: var(--color-text-muted, #6b7488);
     margin-top: 0.75rem;
 }
+/* ── Visión Artificial (YOLO) Styles ── */
+.pqr-capa-card--vision {
+    border: 1px solid #10b981;
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.04), transparent);
+}
+
+.pqr-capa-card__label-num--vision {
+    background: #10b981;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pqr-tematica-tag--vision {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* ── Anexos Grid ── */
+.pqr-anexos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+
+.pqr-anexo-item {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s ease;
+}
+
+.pqr-anexo-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--color-primary);
+}
+
+.pqr-anexo-thumb, .pqr-anexo-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+}
+
+.pqr-anexo-thumb {
+    color: var(--color-primary);
+    background: var(--color-primary-light);
+}
+
+.pqr-anexo-name {
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    text-align: center;
+    word-break: break-all;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pqr-vision-results {
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px dashed rgba(16, 185, 129, 0.3);
+    border-radius: var(--radius-md);
+    padding: 12px;
+}
+
+.pqr-vision-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #047857;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+}

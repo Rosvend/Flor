@@ -104,10 +104,10 @@ from src.application.use_cases.cluster_pqrs import ClusterPQRS
 toxicity_detector = RegexToxicityDetector()
 similarity_analyzer = TfidfSimilarityAnalyzer()
 
-# Sentiment & Corrector se cargan bajo demanda (modelos pesados)
 _sentiment_analyzer = None
 _text_corrector = None
 _pre_classifier = None
+_vision_analyzer = None
 
 def _get_sentiment_analyzer():
     global _sentiment_analyzer
@@ -130,12 +130,20 @@ def _get_pre_classifier():
         _pre_classifier = GeminiClassificationAdapter()
     return _pre_classifier
 
+def _get_vision_analyzer():
+    global _vision_analyzer
+    if _vision_analyzer is None:
+        from src.infrastructure.vision.yolo_vision_adapter import YOLOVisionAdapter
+        _vision_analyzer = YOLOVisionAdapter()
+    return _vision_analyzer
+
 def get_process_pqrs() -> ProcessPQRS:
     return ProcessPQRS(
         toxicity_detector=toxicity_detector,
         sentiment_analyzer=_get_sentiment_analyzer(),
         text_corrector=_get_text_corrector(),
         pre_classifier=_get_pre_classifier(),
+        vision_analyzer=_get_vision_analyzer(),
     )
 
 def get_migrate_raw_to_curated():

@@ -1,5 +1,4 @@
 import { storage } from './storage.js'
-import { USE_MOCK, mockAuth, mockPqrs, mockChatbot } from './mock.js'
 
 // Vite injects VITE_* env vars at build time. In dev this is undefined and we
 // fall back to the local uvicorn. On Vercel, set VITE_API_BASE_URL on the
@@ -214,21 +213,15 @@ export async function request(endpoint, options = {}) {
 export const authService = {
 
     async register(nombre, correoElectronico, password, organizationId = 1) {
-        let data
-
-        if (USE_MOCK) {
-            data = await mockAuth.register(nombre, correoElectronico, password, organizationId)
-        } else {
-            data = await request('/auth/register', {
-                method: 'POST',
-                data: {
-                    nombre,
-                    correo_electronico: correoElectronico,
-                    password,
-                    organization_id: organizationId,
-                },
-            })
-        }
+        const data = await request('/auth/register', {
+            method: 'POST',
+            data: {
+                nombre,
+                correo_electronico: correoElectronico,
+                password,
+                organization_id: organizationId,
+            },
+        })
 
         if (data.user_id) {
             storage.setUser(data)
@@ -239,19 +232,13 @@ export const authService = {
     },
 
     async login(correoElectronico, password) {
-        let data
-
-        if (USE_MOCK) {
-            data = await mockAuth.login(correoElectronico, password)
-        } else {
-            data = await request('/auth/login', {
-                method: 'POST',
-                data: {
-                    correo_electronico: correoElectronico,
-                    password,
-                },
-            })
-        }
+        const data = await request('/auth/login', {
+            method: 'POST',
+            data: {
+                correo_electronico: correoElectronico,
+                password,
+            },
+        })
 
         storage.setTokens(data.access_token)
 
@@ -304,16 +291,10 @@ export const aplicacionService = {
 
 export const pqrsService = {
     async submitPqrs(formData) {
-        if (USE_MOCK) {
-            return await mockPqrs.submit(formData);
-        } else {
-            // Utilizamos el request remozado que maneja FormData nativamente
-            return await request('/pqrs', {
-                method: 'POST',
-                data: formData
-                // requiresAuth: true // Descomentar si el backend requiere estar logueado para radicar PQRS no anónimas
-            });
-        }
+        return await request('/pqrs', {
+            method: 'POST',
+            data: formData
+        });
     }
 }
 
@@ -379,25 +360,15 @@ export const chatbotService = {
 // ─── Aplicación Dashboard & PQRS Services ────────────────────────
 export const dashboardService = {
     async getStats() {
-        if (USE_MOCK) {
-            // Simulated numbers for MVP
-            return Promise.resolve({ active: 5, pending: 2 });
-        }
         return request('/pqrs/stats', { method: 'GET', requiresAuth: true });
     }
 };
 
 export const pqrsListService = {
     async listActive() {
-        if (USE_MOCK) {
-            return mockPqrs.listActive();
-        }
         return request('/pqrs/curated', { method: 'GET', requiresAuth: true });
     },
     async getDetail(id) {
-        if (USE_MOCK) {
-            return mockPqrs.getDetail(id);
-        }
         return request(`/pqrs/curated/${id}`, { method: 'GET', requiresAuth: true });
     },
     async confirm(id, tipo) {
@@ -415,13 +386,6 @@ export const pqrsListService = {
         });
     },
     async getDraft(id) {
-        if (USE_MOCK) {
-            return {
-                draft: "[Basado en Precedente Sugerido RAD-AUTO-001]\nRespuesta estándar para solicitudes de Gestión General.",
-                precedente_id: "RAD-AUTO-001",
-                similitud: 85
-            };
-        }
         return request(`/pqrs/curated/${id}/draft`, { method: 'GET', requiresAuth: true });
     },
     /**

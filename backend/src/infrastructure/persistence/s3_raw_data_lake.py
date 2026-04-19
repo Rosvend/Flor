@@ -63,3 +63,19 @@ class S3RawDataLake(RawDataLakePort):
             self._client.delete_object(Bucket=self._bucket, Key=key)
         except Exception as e:
             print(f"Error borrando de S3: {e}")
+    def store_binary(self, content: bytes, filename: str) -> str:
+        date_prefix = datetime.now(timezone.utc).strftime("%Y/%m/%d")
+        ext = os.path.splitext(filename)[1].lower()
+        content_type = "application/octet-stream"
+        if ext in [".jpg", ".jpeg"]: content_type = "image/jpeg"
+        elif ext == ".png": content_type = "image/png"
+        elif ext == ".pdf": content_type = "application/pdf"
+        
+        key = f"attachments/{date_prefix}/{uuid.uuid4()}{ext}"
+        self._client.put_object(
+            Bucket=self._bucket,
+            Key=key,
+            Body=content,
+            ContentType=content_type,
+        )
+        return key
