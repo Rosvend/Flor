@@ -259,6 +259,11 @@
     color: var(--color-tertiary);
 }
 
+.pqrs-sidebar__footer-btn--logout:hover {
+    color: #dc2626;
+    background-color: #fef2f2;
+}
+
 .pqrs-sidebar__footer-btn svg {
     flex-shrink: 0;
 }
