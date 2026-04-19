@@ -189,6 +189,9 @@ Name disambiguation: **FLOR already exists** as the official Alcaldía Medellín
 - **Citizen-facing Q&A** over the knowledge base — deflects questions that don't need to become PQRSDs.
 - **Agent-facing search** — officials query laws, prior resolutions, department competencies without digging through documents.
 
+### F8 - Computer vision detection for .jpg and .mp4 files
+The system should be able to describe what the images uploaded by a citizen are and provide a description for the government agent to read.
+
 ---
 
 ## Channels & Ingestion
