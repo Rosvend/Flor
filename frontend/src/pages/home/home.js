@@ -3,6 +3,7 @@ import './home.css';
 import { renderNavbar } from '../../components/navbar/navbar.js';
 import chatbotImg from '../../../assets/fotochatbot.png';
 import bannerVideo from '../../../assets/banner.mp4';
+import { chatbotService } from '../../service/api.js';
 
 export function renderHome() {
     const app = document.getElementById('app');
@@ -79,6 +80,33 @@ export function renderHome() {
                 </div>
             </div>
             
+            <!-- Chatbot Window -->
+            <div class="chatbot-window" id="chatbot-window">
+                <div class="chatbot-header">
+                    <div class="chatbot-header-info">
+                        <img src="${chatbotImg}" alt="Flor" class="chatbot-header-avatar">
+                        <div>
+                            <h3 class="chatbot-header-title">Flor</h3>
+                            <span class="chatbot-header-status">En línea</span>
+                        </div>
+                    </div>
+                    <button class="chatbot-close-btn" id="chatbot-close-btn" aria-label="Cerrar chat">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                </div>
+                <div class="chatbot-messages" id="chatbot-messages">
+                    <div class="chat-message chat-message--bot">
+                        ¡Hola! Soy Flor, la asistente virtual de la Alcaldía de Medellín. ¿En qué te puedo ayudar hoy?
+                    </div>
+                </div>
+                <form class="chatbot-input-area" id="chatbot-form">
+                    <input type="text" class="chatbot-input" id="chatbot-input" placeholder="Escribe tu mensaje..." required>
+                    <button type="submit" class="chatbot-send-btn" aria-label="Enviar mensaje">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    </button>
+                </form>
+            </div>
+            
         </main>
 
         <footer class="footer-simple">
@@ -92,4 +120,80 @@ export function renderHome() {
             </div>
         </footer>
     `;
+
+    // Chatbot Logic
+    const chatbotWrapper = document.querySelector('.chatbot-floating-wrapper');
+    const chatbotBtn = document.querySelector('.chatbot-img-btn');
+    const chatbotWindow = document.getElementById('chatbot-window');
+    const chatbotCloseBtn = document.getElementById('chatbot-close-btn');
+    const chatbotForm = document.getElementById('chatbot-form');
+    const chatbotInput = document.getElementById('chatbot-input');
+    const chatbotMessages = document.getElementById('chatbot-messages');
+
+    if (chatbotBtn && chatbotWindow) {
+        // Open chat
+        chatbotWrapper.addEventListener('click', () => {
+            if (chatbotWrapper.classList.contains('is-open')) return;
+            chatbotWrapper.classList.add('is-open');
+            setTimeout(() => {
+                chatbotWindow.classList.add('is-active');
+                chatbotInput.focus();
+            }, 500); // Wait for the wrapper animation to finish
+        });
+
+        // Close chat
+        chatbotCloseBtn.addEventListener('click', () => {
+            chatbotWindow.classList.remove('is-active');
+            setTimeout(() => {
+                chatbotWrapper.classList.remove('is-open');
+            }, 300); // Wait for window exit animation
+        });
+
+        // Form submit
+        chatbotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userText = chatbotInput.value.trim();
+            if(!userText) return;
+
+            // Add user message
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'chat-message chat-message--user';
+            userMsgDiv.textContent = userText;
+            chatbotMessages.appendChild(userMsgDiv);
+            chatbotInput.value = '';
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+            // Add loading indicator
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'chat-loading';
+            loadingDiv.innerHTML = '<div class="chat-loading-dot"></div><div class="chat-loading-dot"></div><div class="chat-loading-dot"></div>';
+            chatbotMessages.appendChild(loadingDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+            try {
+                const res = await chatbotService.sendMessage(userText);
+                
+                // Remove loading
+                chatbotMessages.removeChild(loadingDiv);
+
+                // Add bot message
+                const botMsgDiv = document.createElement('div');
+                botMsgDiv.className = 'chat-message chat-message--bot';
+                botMsgDiv.textContent = res.response || res;
+                chatbotMessages.appendChild(botMsgDiv);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+            } catch (error) {
+                if(chatbotMessages.contains(loadingDiv)) {
+                    chatbotMessages.removeChild(loadingDiv);
+                }
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'chat-message chat-message--bot';
+                errorDiv.style.color = 'var(--color-danger)';
+                errorDiv.textContent = "Lo siento, hubo un error de conexión con el servicio.";
+                chatbotMessages.appendChild(errorDiv);
+                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+            }
+        });
+    }
 }

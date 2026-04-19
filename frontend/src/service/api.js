@@ -1,5 +1,5 @@
 import { storage } from './storage.js'
-import { USE_MOCK, mockAuth, mockPqrs } from './mock.js'
+import { USE_MOCK, mockAuth, mockPqrs, mockChatbot } from './mock.js'
 
 export const BASE_URL = 'http://127.0.0.1:8000/api/v1'
 export const AUTH_CHANGED_EVENT = 'auth-changed'
@@ -240,15 +240,6 @@ export const authService = {
 
         if (USE_MOCK) {
             data = await mockAuth.login(correoElectronico, password)
-            storage.setTokens(data.access_token)
-            storage.setUser({
-                user_id: data.user_id,
-                nombre: data.nombre,
-                correo_electronico: correoElectronico,
-                organization_id: data.organization_id,
-            })
-            emitAuthChanged()
-            return data
         } else {
             data = await request('/auth/login', {
                 method: 'POST',
@@ -308,6 +299,24 @@ export const pqrsService = {
                 data: formData
                 // requiresAuth: true // Descomentar si el backend requiere estar logueado para radicar PQRS no anónimas
             });
+        }
+    }
+}
+
+// ─── Chatbot Service ───────────────────────────────────────────
+
+export const chatbotService = {
+    async sendMessage(message) {
+        if (USE_MOCK) {
+            return await mockChatbot.sendMessage(message);
+        } else {
+            // Se envía como JSON
+            const response = await request('/chatbot/message', {
+                method: 'POST',
+                data: { message }
+            });
+            // Asumiendo que el backend devuelve { "response": "string" } o directamente el string
+            return response;
         }
     }
 }

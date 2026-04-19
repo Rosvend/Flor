@@ -58,7 +58,7 @@ export function renderLogin() {
 
         try {
             await authService.login(correoElectronico, password);
-            window.history.pushState({}, '', '/');
+            window.history.pushState({}, '', '/aplicacion');
             window.dispatchEvent(new PopStateEvent('popstate'));
         } catch (error) {
             const message = error instanceof ApiError ? error.message : 'No se pudo iniciar sesión. Verifica el backend.';
