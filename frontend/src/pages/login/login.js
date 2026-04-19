@@ -32,7 +32,7 @@ export function renderLogin() {
                         </div>
 
                         <p class="text-secondary text-sm" style="margin-top: -0.5rem;">
-                            Usuario de prueba: demo@flor.local / Flor123!
+                            Usuario de prueba: admin@test.com / admin123
                         </p>
                         
                         <div class="form-actions">
@@ -58,7 +58,7 @@ export function renderLogin() {
 
         try {
             await authService.login(correoElectronico, password);
-            window.history.pushState({}, '', '/');
+            window.history.pushState({}, '', '/aplicacion');
             window.dispatchEvent(new PopStateEvent('popstate'));
         } catch (error) {
             const message = error instanceof ApiError ? error.message : 'No se pudo iniciar sesión. Verifica el backend.';

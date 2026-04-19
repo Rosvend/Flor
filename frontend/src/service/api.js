@@ -1,5 +1,5 @@
 import { storage } from './storage.js'
-import { USE_MOCK, mockAuth, mockPqrs } from './mock.js'
+import { USE_MOCK, mockAuth, mockPqrs, mockChatbot } from './mock.js'
 
 export const BASE_URL = 'http://127.0.0.1:8000/api/v1'
 export const AUTH_CHANGED_EVENT = 'auth-changed'
@@ -301,4 +301,38 @@ export const pqrsService = {
             });
         }
     }
+}
+
+// ─── Chatbot Flor Service (F7) ─────────────────────────────────
+
+export const chatbotService = {
+    /**
+     * Envía una pregunta al chatbot Flor (anónimo).
+     * @param {string} question
+     * @returns {Promise<{answer: string, used_fallback: boolean, sources: {title: string, excerpt: string}[]}>}
+     */
+    async query(question) {
+        return await request('/chatbot/query', {
+            method: 'POST',
+            data: { question },
+            timeout: 30000, // generación LLM puede tardar unos segundos
+        })
+    },
+
+    /**
+     * Sube un documento (PDF o .md) a la base de conocimiento.
+     * Requiere usuario autenticado.
+     * @param {File} file
+     * @returns {Promise<{chunks_indexed: number, source_path: string}>}
+     */
+    async uploadDocument(file) {
+        const formData = new FormData()
+        formData.append('file', file)
+        return await request('/chatbot/documents', {
+            method: 'POST',
+            data: formData,
+            requiresAuth: true,
+            timeout: 120000, // PDFs grandes con OCR pueden tardar
+        })
+    },
 }

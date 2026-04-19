@@ -17,4 +17,15 @@ class KnowledgeBasePort(ABC):
     ) -> list[KnowledgeBaseEntry]: ...
 
     @abstractmethod
+    def query_with_scores(
+        self,
+        text: str,
+        k: int = 5,
+        filters: dict[str, str] | None = None,
+    ) -> list[tuple[KnowledgeBaseEntry, float]]:
+        """Like query(), but each result is paired with a similarity score in [0, 1]
+        (1.0 = identical, 0.0 = orthogonal). Higher is better."""
+        ...
+
+    @abstractmethod
     def delete_by_source(self, source_path: str) -> None: ...
