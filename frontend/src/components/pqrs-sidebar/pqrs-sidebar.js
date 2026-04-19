@@ -171,7 +171,6 @@ export async function renderPqrsSidebar(containerEl, options = {}) {
         onSelect(id);
     });
 
-    // Keyboard a11y
     list.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             const item = e.target.closest('[data-pqr-id]');
@@ -181,5 +180,17 @@ export async function renderPqrsSidebar(containerEl, options = {}) {
                 onSelect(id);
             }
         }
+    });
+
+    // ── Footer buttons listeners ──────────────────────────────────
+    const btnStats = containerEl.querySelector('#sidebar-btn-estadisticas');
+    const btnConfig = containerEl.querySelector('#sidebar-btn-configuracion');
+
+    btnStats?.addEventListener('click', () => {
+        onSelect('estadisticas');
+    });
+
+    btnConfig?.addEventListener('click', () => {
+        onSelect('configuracion');
     });
 }

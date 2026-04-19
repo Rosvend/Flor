@@ -267,25 +267,39 @@ def get_pqrs_stats(current_user: User = Depends(get_current_user)):
         pendientes = 0
         now = datetime.now(timezone.utc)
         
+        by_type = {}
+        by_sentiment = {"POSITIVO": 0, "NEUTRAL": 0, "NEGATIVO": 0}
+        
         for p in filtered:
             if p.get("estado") != "CERRADO":
                 pendientes += 1
                 rad_date_str = p.get("timestamp_radicacion")
                 if rad_date_str:
                     try:
-                        # Parse ISO string with or without Z
                         dt = datetime.fromisoformat(rad_date_str.replace("Z", "+00:00"))
                         days_diff = (now - dt).days
-                        # Assuming 15 days is the limit for a PQRS, if it's 14+ days old, it's about to expire
                         if days_diff >= 14:
                             vencen_hoy += 1
                     except Exception:
                         pass
+            
+            # Type distribution
+            t = (p.get("tipo") or "OTROS").upper()
+            by_type[t] = by_type.get(t, 0) + 1
+            
+            # Sentiment distribution
+            sent = (p.get("analisis_ia", {}).get("sentimiento") or "NEUTRAL").upper()
+            if sent in by_sentiment:
+                by_sentiment[sent] += 1
+            else:
+                by_sentiment["NEUTRAL"] += 1
         
         return {
             "total": len(filtered),
             "pendientes": pendientes,
             "vencen_hoy": vencen_hoy,
+            "by_type": by_type,
+            "by_sentiment": by_sentiment
         }
     except Exception as e:
         import logging

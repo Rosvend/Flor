@@ -2,6 +2,8 @@ import '../../../assets/main.css';
 import './aplicacion.css';
 import { renderPqrsSidebar } from '../../components/pqrs-sidebar/pqrs-sidebar.js';
 import { renderPqrDetail } from '../../components/pqr-detail/pqr-detail.js';
+import { renderStatsView } from '../../components/stats-view/stats-view.js';
+import { renderSettingsView } from '../../components/settings-view/settings-view.js';
 import { router } from '../../app/router.js';
 import { getDashboardData } from '../../service/api.js';
 
@@ -129,7 +131,6 @@ export function renderAplicacion() {
     const sidebarCol = document.getElementById('aplicacion-sidebar');
     const mainArea   = document.getElementById('aplicacion-main');
 
-    // ── Callback cuando el usuario selecciona un PQR ─────────────
     function onSelectPqr(pqrId) {
         const newPath = `/aplicacion/${pqrId}`;
         window.history.pushState({}, '', newPath);
@@ -140,8 +141,16 @@ export function renderAplicacion() {
             onSelect: onSelectPqr,
         });
 
-        // Renderizar detalle
-        renderPqrDetail(mainArea, pqrId);
+        // Renderizar área principal
+        if (pqrId === 'estadisticas') {
+            renderStatsView(mainArea);
+        } else if (pqrId === 'configuracion') {
+            renderSettingsView(mainArea);
+        } else if (pqrId) {
+            renderPqrDetail(mainArea, pqrId);
+        } else {
+            renderWelcome(mainArea);
+        }
     }
 
     // ── Renderizar sidebar ────────────────────────────────────────
@@ -151,7 +160,11 @@ export function renderAplicacion() {
     });
 
     // ── Renderizar área principal ─────────────────────────────────
-    if (activePqrId) {
+    if (activePqrId === 'estadisticas') {
+        renderStatsView(mainArea);
+    } else if (activePqrId === 'configuracion') {
+        renderSettingsView(mainArea);
+    } else if (activePqrId) {
         renderPqrDetail(mainArea, activePqrId);
     } else {
         renderWelcome(mainArea);

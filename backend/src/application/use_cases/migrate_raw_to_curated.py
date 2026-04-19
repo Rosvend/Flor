@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from src.domain.ports.raw_data_lake import RawDataLakePort
 from src.domain.ports.curated_data_lake import CuratedDataLakePort
-from src.domain.ports.pqrs_classifier_port import PQRSClassifierPort
+from src.domain.ports.classification_port import ClassificationPort
 from src.application.dtos.ingest_curated_dtos import IngestCuratedMessagesInput
 from src.application.use_cases.ingest_curated_messages import IngestCuratedMessages
 
@@ -20,7 +20,7 @@ class MigrateRawToCurated:
         self,
         raw_data_lake: RawDataLakePort,
         curated_data_lake: CuratedDataLakePort,
-        classifier: PQRSClassifierPort,
+        classifier: ClassificationPort,
         ingest_curated: IngestCuratedMessages
     ) -> None:
         self._raw_data_lake = raw_data_lake
@@ -45,8 +45,7 @@ class MigrateRawToCurated:
                 continue
 
             # 2. Usar NLP para saber si es PQRSD
-            # El clasificador debe tener el método is_pqrs implementado
-            if hasattr(self._classifier, 'is_pqrs') and self._classifier.is_pqrs(contenido):
+            if self._classifier.is_pqrs(contenido):
                 # Es una PQRS! La mapeamos al formato CuratedRecord
                 
                 # Extraer info del usuario si existe
@@ -60,17 +59,22 @@ class MigrateRawToCurated:
                 raw_metadata = raw_record.get("metadata", {})
                 
                 # Clasificar el tipo
-                tipo = self._classifier.classify(contenido)
+                classification_result = self._classifier.pre_classify(contenido)
+                tipo = classification_result.tipo
                 
                 # Construir el diccionario validado para IngestCuratedMessages
                 curated_dict = {
                     "radicado": str(uuid.uuid4()),
                     "timestamp_radicacion": datetime.now(timezone.utc).isoformat(),
-                    "tipo": tipo.upper()[:1] if tipo else "P", # P, Q, R, S, D
+                    "tipo": tipo.upper() if tipo else "Petición",
                     "canal": raw_record.get("canal", "META_DM"),
                     "anonima": raw_record.get("anonima", False),
                     "usuario": usuario,
                     "contenido": contenido,
+                    "secretaria_asignada": classification_result.suggested_department if classification_result.confidence_score >= 0.75 else None,
+                    "subsecretaria_sugerida": classification_result.suggested_subsecretaria if classification_result.confidence_score >= 0.75 else None,
+                    "prioridad": classification_result.priority,
+                    "confidence_score": classification_result.confidence_score,
                     "metadata": {
                         "post_id": raw_metadata.get("post_id"),
                         "created_time": raw_metadata.get("created_time")

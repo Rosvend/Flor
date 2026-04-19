@@ -91,10 +91,7 @@ similarity_analyzer = TfidfSimilarityAnalyzer()
 # Sentiment & Corrector se cargan bajo demanda (modelos pesados)
 _sentiment_analyzer = None
 _text_corrector = None
-_classifier = None
-_router = None
-_department_repo = None
-
+_pre_classifier = None
 
 def _get_sentiment_analyzer():
     global _sentiment_analyzer
@@ -103,7 +100,6 @@ def _get_sentiment_analyzer():
         _sentiment_analyzer = BetoSentimentAnalyzer()
     return _sentiment_analyzer
 
-
 def _get_text_corrector():
     global _text_corrector
     if _text_corrector is None:
@@ -111,50 +107,27 @@ def _get_text_corrector():
         _text_corrector = GeminiTextCorrector()
     return _text_corrector
 
-
-def _get_classifier():
-    global _classifier
-    if _classifier is None:
-        from src.infrastructure.analysis.zero_shot_classifier import HuggingFaceZeroShotClassifier
-        _classifier = HuggingFaceZeroShotClassifier()
-    return _classifier
-
-
-def _get_router():
-    global _router
-    global _department_repo
-    if _router is None:
-        from src.infrastructure.analysis.semantic_router import SemanticDepartmentRouter
-
-        if _department_repo is None:
-            if os.getenv("DATABASE_URL"):
-                from src.infrastructure.knowledge_base.postgres_department_repository import PostgresDepartmentRepository
-                _department_repo = PostgresDepartmentRepository()
-            else:
-                from src.infrastructure.knowledge_base.json_department_repository import JsonDepartmentRepository
-                seed_path = Path(__file__).parent / "knowledge_base" / "data" / "departments.json"
-                _department_repo = JsonDepartmentRepository(seed_path)
-
-        _router = SemanticDepartmentRouter(repository=_department_repo)
-    return _router
-
+def _get_pre_classifier():
+    global _pre_classifier
+    if _pre_classifier is None:
+        from src.infrastructure.classification.gemini_classification_adapter import GeminiClassificationAdapter
+        _pre_classifier = GeminiClassificationAdapter()
+    return _pre_classifier
 
 def get_process_pqrs() -> ProcessPQRS:
     return ProcessPQRS(
         toxicity_detector=toxicity_detector,
         sentiment_analyzer=_get_sentiment_analyzer(),
         text_corrector=_get_text_corrector(),
-        classifier=_get_classifier(),
-        router=_get_router(),
+        pre_classifier=_get_pre_classifier(),
     )
-
 
 def get_migrate_raw_to_curated():
     from src.application.use_cases.migrate_raw_to_curated import MigrateRawToCurated
     return MigrateRawToCurated(
         raw_data_lake=raw_data_lake,
         curated_data_lake=curated_data_lake,
-        classifier=_get_classifier(),
+        classifier=_get_pre_classifier(),
         ingest_curated=ingest_curated_messages
     )
 

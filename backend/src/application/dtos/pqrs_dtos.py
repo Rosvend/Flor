@@ -17,6 +17,9 @@ class ProcessPQRSOutput:
     offensive_words: list[str] = field(default_factory=list)
     tipo_sugerido: Optional[str] = None
     secretaria_asignada: Optional[str] = None
+    subsecretaria_sugerida: Optional[str] = None
+    prioridad: Optional[str] = None
+    confidence_score: Optional[float] = None
 
 
 @dataclass
