@@ -34,7 +34,7 @@ export function renderHome() {
                         Registra y haz seguimiento a tus peticiones, reclamos y sugerencias de manera ágil. escucharte y mejorar Medellín juntos.
                     </p>
 
-                    <a href="#" class="btn btn--outline-dark btn--lg">Conoce más</a>
+                    <a href="/faq" class="btn btn--outline-dark btn--lg" data-link>Conoce más</a>
                 </div>
             </div>
 

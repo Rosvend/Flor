@@ -233,6 +233,103 @@
     color: var(--color-primary);
 }
 
+/* Tags removibles con X */
+.pqr-tematica-tag--removable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px 5px 14px;
+}
+
+.pqr-tematica-tag__remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-muted);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    border-radius: 50%;
+    transition: color var(--transition-fast), background var(--transition-fast);
+    line-height: 1;
+}
+
+.pqr-tematica-tag__remove:hover {
+    color: var(--color-danger, #e53e3e);
+    background: rgba(229, 62, 62, 0.1);
+}
+
+/* Wrapper del botón añadir + dropdown */
+.pqr-tematica-add-wrapper {
+    position: relative;
+}
+
+/* Dropdown de búsqueda */
+.pqr-tematica-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 100;
+    background: var(--color-surface);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 280px;
+    overflow: hidden;
+}
+
+.pqr-tematica-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border: none;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface-2);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    outline: none;
+}
+
+.pqr-tematica-search::placeholder {
+    color: var(--color-text-muted);
+}
+
+.pqr-tematica-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.pqr-tematica-list::-webkit-scrollbar { width: 4px; }
+.pqr-tematica-list::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
+
+.pqr-tematica-option {
+    padding: 8px 14px;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+
+.pqr-tematica-option:hover {
+    background: var(--color-surface-2);
+}
+
+.pqr-tematica-option--empty {
+    color: var(--color-text-muted);
+    cursor: default;
+    font-style: italic;
+}
+
+.pqr-tematica-mark {
+    background: #fef9c3;
+    color: #854d0e;
+    border-radius: 2px;
+    font-style: normal;
+}
+
 /* Capa 3: texto original */
 .pqr-texto-original {
     position: relative;
