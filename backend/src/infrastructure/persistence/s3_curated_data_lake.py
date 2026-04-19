@@ -11,6 +11,7 @@ from src.domain.ports.curated_data_lake import CuratedDataLakePort
 
 class S3CuratedDataLake(CuratedDataLakePort):
     def __init__(self) -> None:
+        import time
         self._bucket = os.environ["S3_RAW_BUCKET"]
         self._prefix = os.getenv("S3_CURATED_PREFIX", "curated/")
         self._client = boto3.client(
@@ -20,6 +21,12 @@ class S3CuratedDataLake(CuratedDataLakePort):
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
             config=Config(connect_timeout=5, read_timeout=10, retries={"max_attempts": 1}),
         )
+        self._cache = []
+        self._cache_time = 0
+        self._cache_ttl = 60  # Cache for 60 seconds
+        
+        import threading
+        self._lock = threading.Lock()
 
     def _get_next_id_and_increment(self, count: int) -> int:
         if count <= 0:
@@ -65,6 +72,7 @@ class S3CuratedDataLake(CuratedDataLakePort):
             )
             keys.append(key)
 
+        self._cache_time = 0  # Invalidate cache
         return keys
 
     def update(self, key: str, record: dict) -> None:
@@ -74,18 +82,48 @@ class S3CuratedDataLake(CuratedDataLakePort):
             Body=json.dumps(record, ensure_ascii=False),
             ContentType="application/json",
         )
+        self._cache_time = 0  # Invalidate cache
 
     def get_all(self) -> list[dict]:
-        records = []
-        paginator = self._client.get_paginator("list_objects_v2")
-        for page in paginator.paginate(Bucket=self._bucket, Prefix=self._prefix):
-            if "Contents" not in page:
-                continue
-            for obj in page["Contents"]:
-                if obj["Key"].endswith(".json"):
-                    res = self._client.get_object(Bucket=self._bucket, Key=obj["Key"])
-                    records.append(json.loads(res["Body"].read().decode("utf-8")))
-        return records
+        import time
+        
+        # Fast path if cache is valid (no lock needed for reading the time)
+        if time.time() - self._cache_time < self._cache_ttl and self._cache:
+            return self._cache
+            
+        with self._lock:
+            # Check again inside lock
+            if time.time() - self._cache_time < self._cache_ttl and self._cache:
+                return self._cache
+
+            import concurrent.futures
+            keys_to_fetch = []
+            paginator = self._client.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=self._bucket, Prefix=self._prefix):
+                if "Contents" not in page:
+                    continue
+                for obj in page["Contents"]:
+                    if obj["Key"].endswith(".json"):
+                        keys_to_fetch.append(obj["Key"])
+            
+            records = []
+            # Fetch files concurrently to speed up the process
+            def fetch_s3_object(key):
+                try:
+                    res = self._client.get_object(Bucket=self._bucket, Key=key)
+                    return json.loads(res["Body"].read().decode("utf-8"))
+                except Exception:
+                    return None
+                    
+            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+                results = executor.map(fetch_s3_object, keys_to_fetch)
+                for res in results:
+                    if res:
+                        records.append(res)
+                        
+            self._cache = records
+            self._cache_time = time.time()
+            return records
 
     def get_by_radicado(self, radicado: str) -> dict | None:
         # In this simple implementation, we might need to scan if we don't have an index.

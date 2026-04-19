@@ -262,12 +262,34 @@ def get_pqrs_stats(current_user: User = Depends(get_current_user)):
             p for p in all_pqrs 
             if p.get("organization_id", 1) == current_user.organization_id
         ]
+        
+        vencen_hoy = 0
+        pendientes = 0
+        now = datetime.now(timezone.utc)
+        
+        for p in filtered:
+            if p.get("estado") != "CERRADO":
+                pendientes += 1
+                rad_date_str = p.get("timestamp_radicacion")
+                if rad_date_str:
+                    try:
+                        # Parse ISO string with or without Z
+                        dt = datetime.fromisoformat(rad_date_str.replace("Z", "+00:00"))
+                        days_diff = (now - dt).days
+                        # Assuming 15 days is the limit for a PQRS, if it's 14+ days old, it's about to expire
+                        if days_diff >= 14:
+                            vencen_hoy += 1
+                    except Exception:
+                        pass
+        
         return {
             "total": len(filtered),
-            "pendientes": len([p for p in filtered if p.get("estado") != "CERRADO"]),
-            "vencen_hoy": 1, # Placeholder logic
+            "pendientes": pendientes,
+            "vencen_hoy": vencen_hoy,
         }
     except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error in stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

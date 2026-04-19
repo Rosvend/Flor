@@ -3,6 +3,7 @@ import './aplicacion.css';
 import { renderPqrsSidebar } from '../../components/pqrs-sidebar/pqrs-sidebar.js';
 import { renderPqrDetail } from '../../components/pqr-detail/pqr-detail.js';
 import { router } from '../../app/router.js';
+import { getDashboardData } from '../../service/api.js';
 
 /* ================================================================
    APLICACION.JS — Página de gestión PQRS
@@ -32,7 +33,31 @@ function getPqrIdFromPath(path) {
 /**
  * Renderiza la pantalla de bienvenida en el área principal.
  */
-function renderWelcome(mainAreaEl) {
+async function renderWelcome(mainAreaEl) {
+    // Render skeleton/loading state first
+    mainAreaEl.innerHTML = `
+        <div class="aplicacion-welcome">
+            <div class="aplicacion-welcome__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" x2="8" y1="13" y2="13"/>
+                    <line x1="16" x2="8" y1="17" y2="17"/>
+                    <line x1="10" x2="8" y1="9" y2="9"/>
+                </svg>
+            </div>
+            <h2 class="aplicacion-welcome__title">¡Hola, bienvenido de nuevo! 👋</h2>
+            <p class="aplicacion-welcome__subtitle">Cargando tus estadísticas...</p>
+        </div>
+    `;
+
+    let stats = { pendientes: 0, vencen_hoy: 0, total: 0 };
+    try {
+        stats = await getDashboardData();
+    } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+    }
+
     mainAreaEl.innerHTML = `
         <div class="aplicacion-welcome">
             <div class="aplicacion-welcome__icon">
@@ -61,15 +86,16 @@ function renderWelcome(mainAreaEl) {
 
             <div class="aplicacion-welcome__stats">
                 <div class="aplicacion-welcome__stat">
-                    <div class="aplicacion-welcome__stat-num">4</div>
+                    <div class="aplicacion-welcome__stat-num">${stats.pendientes}</div>
                     <div class="aplicacion-welcome__stat-label">Pendientes</div>
                 </div>
                 <div class="aplicacion-welcome__stat">
-                    <div class="aplicacion-welcome__stat-num">1</div>
-                    <div class="aplicacion-welcome__stat-label">Vence hoy</div>
+                    <div class="aplicacion-welcome__stat-num">${stats.vencen_hoy}</div>
+                    <div class="aplicacion-welcome__stat-label">Vence pronto</div>
                 </div>
                 <div class="aplicacion-welcome__stat">
-                    <div class="aplicacion-welcome__stat-label" style="margin-top:auto">Gestión PQRS</div>
+                    <div class="aplicacion-welcome__stat-num">${stats.total}</div>
+                    <div class="aplicacion-welcome__stat-label">Total Histórico</div>
                 </div>
             </div>
         </div>
