@@ -3,6 +3,13 @@
     max-width: 800px;
     margin: 0 auto;
     animation: fadeIn 0.4s ease-out;
+    /* The parent .aplicacion-main-area has overflow:hidden, so let this view
+       fill the available height and scroll internally when its content exceeds it. */
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 .settings-view__header {
