@@ -37,6 +37,9 @@ similarity_analyzer = TfidfSimilarityAnalyzer()
 # Sentiment & Corrector se cargan bajo demanda (modelos pesados)
 _sentiment_analyzer = None
 _text_corrector = None
+_classifier = None
+_router = None
+_department_repo = None
 
 
 def _get_sentiment_analyzer():
@@ -55,11 +58,37 @@ def _get_text_corrector():
     return _text_corrector
 
 
+def _get_classifier():
+    global _classifier
+    if _classifier is None:
+        from src.infrastructure.analysis.zero_shot_classifier import HuggingFaceZeroShotClassifier
+        _classifier = HuggingFaceZeroShotClassifier()
+    return _classifier
+
+
+def _get_router():
+    global _router
+    global _department_repo
+    if _router is None:
+        from pathlib import Path
+        from src.infrastructure.knowledge_base.json_department_repository import JsonDepartmentRepository
+        from src.infrastructure.analysis.semantic_router import SemanticDepartmentRouter
+        
+        if _department_repo is None:
+            seed_path = Path(__file__).parent / "knowledge_base" / "data" / "departments.json"
+            _department_repo = JsonDepartmentRepository(seed_path)
+            
+        _router = SemanticDepartmentRouter(repository=_department_repo)
+    return _router
+
+
 def get_process_pqrs() -> ProcessPQRS:
     return ProcessPQRS(
         toxicity_detector=toxicity_detector,
         sentiment_analyzer=_get_sentiment_analyzer(),
         text_corrector=_get_text_corrector(),
+        classifier=_get_classifier(),
+        router=_get_router(),
     )
 
 

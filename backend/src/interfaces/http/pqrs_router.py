@@ -22,6 +22,8 @@ class AnalyzeResponse(BaseModel):
     is_offensive: bool
     toxicity_warning: Optional[str]
     offensive_words: list[str]
+    tipo_sugerido: Optional[str] = None
+    secretaria_asignada: Optional[str] = None
 
 
 class ClusterItemResponse(BaseModel):
@@ -49,6 +51,8 @@ def analyze_pqrs(request: AnalyzeRequest) -> AnalyzeResponse:
     Recibe el texto crudo de una PQRSD y devuelve:
     - Análisis de sentimiento (Hugging Face BETO)
     - Detección de groserías (regex)
+    - Clasificación Zero-Shot de tipo de PQRS
+    - Enrutamiento Semántico de Secretaría
     - Texto mejorado (Gemini + Manual V5)
     """
     try:
@@ -65,7 +69,10 @@ def analyze_pqrs(request: AnalyzeRequest) -> AnalyzeResponse:
             is_offensive=result.is_offensive,
             toxicity_warning=result.toxicity_warning,
             offensive_words=result.offensive_words,
+            tipo_sugerido=result.tipo_sugerido,
+            secretaria_asignada=result.secretaria_asignada,
         )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

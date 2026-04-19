@@ -54,6 +54,8 @@ def analyze_and_update_records(keys: list[str], records: list[dict]):
                     "is_offensive": analisis.is_offensive,
                     "toxicity_warning": analisis.toxicity_warning,
                     "offensive_words": analisis.offensive_words,
+                    "tipo_sugerido": analisis.tipo_sugerido,
+                    "secretaria_asignada": analisis.secretaria_asignada,
                     "texto_mejorado": analisis.improved_text
                 }
                 # Actualizamos el archivo en S3 con los nuevos datos de IA
