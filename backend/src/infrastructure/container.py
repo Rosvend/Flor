@@ -164,6 +164,8 @@ def get_draft_intelligent_response():
     )
 
 
+
+
 cluster_pqrs = ClusterPQRS(
     similarity_analyzer=similarity_analyzer,
     data_lake=raw_data_lake,
@@ -198,6 +200,7 @@ ingest_knowledge_base_document = IngestKnowledgeBaseDocument(
     ingestion=document_ingestion_service,
 )
 
+_generation = None
 query_flor_chatbot: QueryFlorChatbot | None = None
 summarize_pqrsd: SummarizePQRSD | None = None
 draft_response_pqrsd: DraftResponsePQRSD | None = None
@@ -225,3 +228,12 @@ if os.getenv("GEMINI_API_KEY"):
     )
 else:
     logger.warning("GEMINI_API_KEY not set — chatbot, summarize and draft endpoints will return 503.")
+
+
+def get_analyze_map_density():
+    from src.application.use_cases.analyze_map_density import AnalyzeMapDensity
+    _gen = _generation if os.getenv("GEMINI_API_KEY") else None
+    return AnalyzeMapDensity(
+        curated_data_lake=curated_data_lake,
+        generation=_gen,
+    )

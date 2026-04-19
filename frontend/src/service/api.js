@@ -420,6 +420,17 @@ export const pqrsListService = {
     },
 };
 
+// ─── Mapa de Comunas (F6) ─────────────────────────────────────────
+export const mapService = {
+    /**
+     * Devuelve la distribución de PQRS por comunas de Medellín con análisis IA.
+     * @returns {Promise<{total_pqrs: number, total_mapped: number, communes: Array}>}
+     */
+    async getDensity() {
+        return request('/pqrs/map', { method: 'GET', requiresAuth: true, timeout: 30000 });
+    },
+};
+
 // Exported helpers used by aplicacion page
 export const getDashboardData = dashboardService.getStats;
 export const getActivePqrs = pqrsListService.listActive;

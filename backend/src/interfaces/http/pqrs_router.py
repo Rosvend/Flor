@@ -718,3 +718,21 @@ def draft_curated_pqr_response(
         "borrador_respuesta": borrador_respuesta,
         "cached": False,
     }
+
+
+# ── F6: Mapa de densidad por comunas de Medellín ────────────────────────────
+
+@router.get("/map")
+def get_pqrs_map(current_user: User = Depends(get_current_user)):
+    """
+    Devuelve la distribución de PQRS por comunas de Medellín.
+    Incluye conteo, distribución por tipo y, si Gemini está configurado,
+    un análisis IA de la problemática dominante en cada zona.
+    """
+    try:
+        use_case = container.get_analyze_map_density()
+        result = use_case.execute(organization_id=current_user.organization_id)
+        return result
+    except Exception as e:
+        logger.error("Error en /pqrs/map: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
