@@ -57,10 +57,12 @@ function renderItem(pqr, isActive) {
     const vence = getVenceBadge(fechaVence);
     const tipoClass = getTipoBadgeClass(pqr.tipo);
     const activeClass = isActive ? 'pqrs-item--active' : '';
-    const tipoLabel = pqr.tipo.charAt(0) + pqr.tipo.slice(1).toLowerCase();
+    const pqrTipo = pqr.tipo || 'Peticion';
+    const tipoLabel = pqrTipo.charAt(0).toUpperCase() + pqrTipo.slice(1).toLowerCase();
     
     // Asunto: Usamos el texto mejorado de IA o los primeros 60 caracteres del contenido
-    const asunto = pqr.analisis_ia?.texto_mejorado || pqr.contenido.substring(0, 60) + '...';
+    const contenidoStr = pqr.contenido || 'Sin contenido detallado';
+    const asunto = pqr.analisis_ia?.texto_mejorado || contenidoStr.substring(0, 60) + '...';
     const confianza = pqr.analisis_ia ? 99 : 0; // Placeholder confianza
 
     return `
