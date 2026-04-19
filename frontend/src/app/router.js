@@ -3,12 +3,14 @@ import { renderHome } from '../pages/home/home.js'
 import { renderLogin } from '../pages/login/login.js'
 import { renderPqrs } from '../pages/pqrs/pqrs.js'
 import { renderAplicacion } from '../pages/aplicacion/aplicacion.js'
+import { renderAdminKnowledgeBase } from '../pages/admin-knowledge-base/admin-knowledge-base.js'
 
 const routes = {
     '/': renderHome,
     '/login': renderLogin,
     '/pqrs': renderPqrs,
     '/aplicacion': renderAplicacion,
+    '/admin/knowledge-base': renderAdminKnowledgeBase,
 }
 
 /* Rutas de prefijo — cualquier sub-ruta /aplicacion/:id también usa renderAplicacion */

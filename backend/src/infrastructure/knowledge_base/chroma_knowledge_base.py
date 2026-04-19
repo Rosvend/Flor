@@ -99,18 +99,31 @@ class ChromaKnowledgeBase(KnowledgeBasePort):
         k: int = 5,
         filters: dict[str, str] | None = None,
     ) -> list[KnowledgeBaseEntry]:
+        return [entry for entry, _ in self.query_with_scores(text, k=k, filters=filters)]
+
+    def query_with_scores(
+        self,
+        text: str,
+        k: int = 5,
+        filters: dict[str, str] | None = None,
+    ) -> list[tuple[KnowledgeBaseEntry, float]]:
         query_embedding = self._embedder.embed_query(text)
         res = self._collection.query(
             query_embeddings=[query_embedding],
             n_results=k,
             where=filters or None,
+            include=["documents", "metadatas", "distances"],
         )
-        out: list[KnowledgeBaseEntry] = []
         ids = res.get("ids", [[]])[0]
         docs = res.get("documents", [[]])[0]
         metas = res.get("metadatas", [[]])[0]
-        for doc_id, content, meta in zip(ids, docs, metas):
-            out.append(_to_entry(doc_id, content, meta or {}))
+        dists = res.get("distances", [[]])[0]
+        out: list[tuple[KnowledgeBaseEntry, float]] = []
+        for doc_id, content, meta, dist in zip(ids, docs, metas, dists):
+            # Cosine space in Chroma: distance ∈ [0, 2]; similarity = 1 - distance / 2
+            # clamped to [0, 1] for safety against float drift.
+            similarity = max(0.0, min(1.0, 1.0 - float(dist) / 2.0))
+            out.append((_to_entry(doc_id, content, meta or {}), similarity))
         return out
 
     def delete_by_source(self, source_path: str) -> None:

@@ -3,7 +3,7 @@ import { USE_MOCK, mockAuth, mockPqrs, mockChatbot } from './mock.js'
 
 export const BASE_URL = 'http://127.0.0.1:8000/api/v1'
 export const AUTH_CHANGED_EVENT = 'auth-changed'
-export const AUTH_EXPIRED_EVENT = 'auth-expired' 
+export const AUTH_EXPIRED_EVENT = 'auth-expired'
 export const AUTH_FORBIDDEN_EVENT = 'auth-forbidden' // Evento para manejar acceso denegado por roles
 
 // ─── Clases de Errores Específicos ──────────────────────────────
@@ -61,7 +61,7 @@ async function refreshAccessToken() {
         if (!response.ok) return false
 
         const tokenData = await response.json()
-        const newAccessToken  = tokenData.access_token  || tokenData.accessToken  || tokenData
+        const newAccessToken = tokenData.access_token || tokenData.accessToken || tokenData
         const newRefreshToken = tokenData.refresh_token || tokenData.refreshToken || refreshToken
         storage.setTokens(newAccessToken, newRefreshToken)
         return true
@@ -160,15 +160,15 @@ export async function request(endpoint, options = {}) {
                     refreshPromise = null;
                 });
             }
-            
+
             const refreshed = await refreshPromise;
-            
+
             if (refreshed) {
                 // Reintento de la petición original pasandole bandera de Retry
                 return request(endpoint, { ...options, _isRetry: true });
             }
         }
-        
+
         // 6. Centralizar Redirects usando Eventos
         storage.clear();
         emitAuthChanged();
@@ -314,22 +314,38 @@ export const pqrsService = {
     }
 }
 
-// ─── Chatbot Service ───────────────────────────────────────────
+// ─── Chatbot Flor Service (F7) ─────────────────────────────────
 
 export const chatbotService = {
-    async sendMessage(message) {
-        if (USE_MOCK) {
-            return await mockChatbot.sendMessage(message);
-        } else {
-            // Se envía como JSON
-            const response = await request('/chatbot/message', {
-                method: 'POST',
-                data: { message }
-            });
-            // Asumiendo que el backend devuelve { "response": "string" } o directamente el string
-            return response;
-        }
-    }
+    /**
+     * Envía una pregunta al chatbot Flor (anónimo).
+     * @param {string} question
+     * @returns {Promise<{answer: string, used_fallback: boolean, sources: {title: string, excerpt: string}[]}>}
+     */
+    async query(question) {
+        return await request('/chatbot/query', {
+            method: 'POST',
+            data: { question },
+            timeout: 30000, // generación LLM puede tardar unos segundos
+        })
+    },
+
+    /**
+     * Sube un documento (PDF o .md) a la base de conocimiento.
+     * Requiere usuario autenticado.
+     * @param {File} file
+     * @returns {Promise<{chunks_indexed: number, source_path: string}>}
+     */
+    async uploadDocument(file) {
+        const formData = new FormData()
+        formData.append('file', file)
+        return await request('/chatbot/documents', {
+            method: 'POST',
+            data: formData,
+            requiresAuth: true,
+            timeout: 120000, // PDFs grandes con OCR pueden tardar
+        })
+    },
 }
 
 // ─── Aplicación Dashboard & PQRS Services ────────────────────────
