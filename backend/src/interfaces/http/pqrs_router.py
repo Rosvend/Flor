@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -436,6 +437,86 @@ def _notify_resolved(record: dict) -> None:
             container.notifier.notify_resolved(record)
     except Exception as exc:
         logger.error("Error en notificación de respuesta: %s", exc)
+
+
+# ── Public Tracking Endpoints (no auth) ─────────────────────────────────────
+
+def _get_department_name(organization_id: int) -> str:
+    """Looks up department name from organization_id via PostgreSQL."""
+    try:
+        from sqlalchemy import create_engine, text as sa_text
+        engine = create_engine(os.environ["DATABASE_URL"])
+        with engine.connect() as conn:
+            row = conn.execute(
+                sa_text("SELECT name FROM departments WHERE organization_id = :oid"),
+                {"oid": organization_id},
+            ).fetchone()
+        return row[0] if row else "Dependencia no asignada"
+    except Exception:
+        return "Dependencia no asignada"
+
+
+def _map_status(estado: str) -> str:
+    e = (estado or "").lower()
+    if e in ("respondido", "cerrado", "closed"):
+        return "RESPONDIDA"
+    if e in ("abierto", "pendiente", "nuevo", "procesando", "en_gestion"):
+        return "EN_GESTION"
+    return "EN_GESTION"
+
+
+@router.get("/track/{radicado}")
+def track_pqrsd(radicado: str):
+    """
+    Endpoint público — ciudadano consulta el estado de su PQRSD por radicado.
+    No requiere autenticación.
+    """
+    pqr = container.curated_data_lake.get_by_radicado(radicado.upper())
+    if not pqr:
+        raise HTTPException(status_code=404, detail=f"No encontramos una PQRSD con el radicado {radicado}.")
+
+    org_id = pqr.get("organization_id")
+    assigned_to = _get_department_name(org_id) if org_id else "Dependencia no asignada"
+
+    estado = pqr.get("estado", "abierto")
+    status = _map_status(estado)
+
+    # Anexos: el campo puede venir como lista de strings o no existir
+    raw_anexos = pqr.get("anexos") or []
+    if isinstance(raw_anexos, list):
+        attachments = [{"name": a} if isinstance(a, str) else a for a in raw_anexos]
+    else:
+        attachments = []
+
+    respuesta_raw = pqr.get("respuesta")
+    response_block = None
+    if respuesta_raw:
+        response_block = {
+            "message": respuesta_raw,
+            "responded_at": pqr.get("timestamp_respuesta", ""),
+        }
+
+    return {
+        "radicado":    pqr.get("radicado", radicado),
+        "status":      status,
+        "created_at":  pqr.get("timestamp_radicacion", ""),
+        "type":        pqr.get("tipo", ""),
+        "subject":     pqr.get("asunto_principal") or (pqr.get("contenido", "") or "")[:80],
+        "channel":     pqr.get("canal", ""),
+        "assigned_to": assigned_to,
+        "description": pqr.get("contenido") or pqr.get("descripcion_detallada", ""),
+        "attachments": attachments,
+        "response":    response_block,
+    }
+
+
+@router.get("/track/{radicado}/exists")
+def track_pqrsd_exists(radicado: str):
+    """Verificación rápida — devuelve 200 si existe, 404 si no."""
+    pqr = container.curated_data_lake.get_by_radicado(radicado.upper())
+    if not pqr:
+        raise HTTPException(status_code=404, detail=f"No encontramos una PQRSD con el radicado {radicado}.")
+    return {"exists": True, "radicado": pqr.get("radicado")}
 
 
 @router.post("/clusters", response_model=ClusterResponse)
