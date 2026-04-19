@@ -479,6 +479,7 @@ export async function renderPqrDetail(containerEl, pqrId) {
             btn.disabled = false;
         }
     });
+
     // Enviar respuesta
     document.getElementById('btn-enviar-respuesta')?.addEventListener('click', async () => {
         const textarea = document.getElementById('pqr-response-textarea');
