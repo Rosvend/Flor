@@ -5,6 +5,7 @@ import { renderPqrs } from '../pages/pqrs/pqrs.js'
 import { renderPqrsStatusLookup, renderPqrsStatusDetail } from '../pages/pqrs-status/pqrs-status.js'
 import { renderAplicacion } from '../pages/aplicacion/aplicacion.js'
 import { renderAdminKnowledgeBase } from '../pages/admin-knowledge-base/admin-knowledge-base.js'
+import { renderFaq } from '../pages/faq/faq.js'
 
 const routes = {
     '/': renderHome,
@@ -13,6 +14,7 @@ const routes = {
     '/pqrs/estado': renderPqrsStatusLookup,
     '/aplicacion': renderAplicacion,
     '/admin/knowledge-base': renderAdminKnowledgeBase,
+    '/faq': renderFaq,
 }
 
 /* Rutas de prefijo — cualquier sub-ruta /aplicacion/:id también usa renderAplicacion */
