@@ -1,24 +1,39 @@
+import logging
 import os
+from pathlib import Path
 
+from src.application.use_cases.ingest_curated_messages import IngestCuratedMessages
+from src.application.use_cases.ingest_knowledge_base_document import (
+    IngestKnowledgeBaseDocument,
+)
+from src.application.use_cases.ingest_raw_messages import IngestRawMessages
+from src.application.use_cases.query_flor_chatbot import QueryFlorChatbot
 from src.infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.auth.jwt_token_generator import JwtTokenGenerator
-from src.infrastructure.persistence.in_memory_user_repository import InMemoryUserRepository
+from src.infrastructure.knowledge_base.chroma_knowledge_base import ChromaKnowledgeBase
+from src.infrastructure.knowledge_base.document_ingestion_service import (
+    DocumentIngestionService,
+)
 from src.infrastructure.persistence.in_memory_raw_data_lake import InMemoryRawDataLake
-from src.application.use_cases.ingest_raw_messages import IngestRawMessages
-from src.application.use_cases.ingest_curated_messages import IngestCuratedMessages
+from src.infrastructure.persistence.in_memory_user_repository import InMemoryUserRepository
+
+logger = logging.getLogger(__name__)
 
 # ── Auth & Persistence ───────────────────────────────────────────────────────
 user_repository = InMemoryUserRepository()
 password_hasher = BcryptPasswordHasher()
 token_generator = JwtTokenGenerator()
 
+# ── Data lake (S3 or in-memory fallback) ────────────────────────────────────
 if os.getenv("S3_RAW_BUCKET"):
-    from src.infrastructure.persistence.s3_raw_data_lake import S3RawDataLake
     from src.infrastructure.persistence.s3_curated_data_lake import S3CuratedDataLake
+    from src.infrastructure.persistence.s3_raw_data_lake import S3RawDataLake
     raw_data_lake = S3RawDataLake()
     curated_data_lake = S3CuratedDataLake()
 else:
-    from src.infrastructure.persistence.in_memory_curated_data_lake import InMemoryCuratedDataLake
+    from src.infrastructure.persistence.in_memory_curated_data_lake import (
+        InMemoryCuratedDataLake,
+    )
     raw_data_lake = InMemoryRawDataLake()
     curated_data_lake = InMemoryCuratedDataLake()
 
@@ -70,14 +85,13 @@ def _get_router():
     global _router
     global _department_repo
     if _router is None:
-        from pathlib import Path
         from src.infrastructure.knowledge_base.json_department_repository import JsonDepartmentRepository
         from src.infrastructure.analysis.semantic_router import SemanticDepartmentRouter
-        
+
         if _department_repo is None:
             seed_path = Path(__file__).parent / "knowledge_base" / "data" / "departments.json"
             _department_repo = JsonDepartmentRepository(seed_path)
-            
+
         _router = SemanticDepartmentRouter(repository=_department_repo)
     return _router
 
@@ -96,3 +110,40 @@ cluster_pqrs = ClusterPQRS(
     similarity_analyzer=similarity_analyzer,
     data_lake=raw_data_lake,
 )
+
+# ── Chatbot (F7) ────────────────────────────────────────────────────────────
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+_CHROMA_DIR = _REPO_ROOT / "backend" / ".knowledge_base" / "chroma"
+_UPLOADS_DIR = _REPO_ROOT / "backend" / ".knowledge_base" / "uploads"
+_MARKDOWN_DIR = _REPO_ROOT / "docs" / "knowledge_base"
+
+knowledge_base = ChromaKnowledgeBase(persist_dir=_CHROMA_DIR)
+
+document_ingestion_service = DocumentIngestionService(
+    knowledge_base=knowledge_base,
+    uploads_dir=_UPLOADS_DIR,
+    markdown_dir=_MARKDOWN_DIR,
+)
+
+ingest_knowledge_base_document = IngestKnowledgeBaseDocument(
+    ingestion=document_ingestion_service,
+)
+
+query_flor_chatbot: QueryFlorChatbot | None = None
+if os.getenv("GEMINI_API_KEY"):
+    from src.infrastructure.classification.gemini_generation_adapter import (
+        GeminiGenerationAdapter,
+    )
+    _generation = GeminiGenerationAdapter()
+    query_flor_chatbot = QueryFlorChatbot(
+        knowledge_base=knowledge_base,
+        generation=_generation,
+        fallback_message=os.getenv(
+            "CHATBOT_FALLBACK_MESSAGE",
+            "No tengo esa respuesta. Puedes radicar un PQRSD o escribir a FLOR por WhatsApp al +57 301 604 4444.",
+        ),
+        top_k=int(os.getenv("CHATBOT_TOP_K", "5")),
+        min_similarity=float(os.getenv("CHATBOT_MIN_SIMILARITY", "0.55")),
+    )
+else:
+    logger.warning("GEMINI_API_KEY not set — chatbot endpoint will return 503.")

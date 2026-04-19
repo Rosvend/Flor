@@ -185,9 +185,10 @@ The citizen's right to a response is untouched.
 - Purely cosmetic help; the citizen may submit unstructured text and that submission is legally valid.
 
 ### F7 — Flor — RAG chatbot *(extension)*
-Name disambiguation: **FLOR already exists** as the official Alcaldía Medellín WhatsApp chatbot and is the ingestion surface for Channel 2 (see below). Our "Flor" layer adds:
+Name disambiguation: **FLOR already exists** as the official Alcaldía Medellín WhatsApp chatbot (Phone number +57 3016044444) and is the ingestion surface for Channel 2 (see below). Our "Flor" layer adds:
 - **Citizen-facing Q&A** over the knowledge base — deflects questions that don't need to become PQRSDs.
-- **Agent-facing search** — officials query laws, prior resolutions, department competencies without digging through documents.
+- **Agent-facing search** — officials query laws, prior resolutions, department competencies without digging through documents. 
+Flor should be updated through an upload new document feature where the documents are processed and added to Flor's knowledge base.
 
 ### F8 - Computer vision detection for .jpg and .mp4 files
 The system should be able to describe what the images uploaded by a citizen are and provide a description for the government agent to read.

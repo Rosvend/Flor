@@ -16,7 +16,7 @@ export function renderHome() {
         ${renderNavbar({ currentPath: '/' })}
 
         <main id="main-content" class="home-layout-new">
-            
+
             <!-- Left Column -->
             <div class="home-col-new home-col--left">
                 <div class="home-col-content-new">
@@ -24,20 +24,20 @@ export function renderHome() {
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-info"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         PORTAL CIUDADANO
                     </div>
-                    
+
                     <h1 class="home-title-new">
                         Tu voz construye<br>
                         <span class="highlight-text">nuestra ciudad</span>
                     </h1>
-                    
+
                     <p class="home-paragraph-new">
                         Registra y haz seguimiento a tus peticiones, reclamos y sugerencias de manera ágil. escucharte y mejorar Medellín juntos.
                     </p>
-                    
+
                     <a href="#" class="btn btn--outline-dark btn--lg">Conoce más</a>
                 </div>
             </div>
-            
+
             <!-- Center Chatbot Floating Element -->
             <div class="chatbot-floating-wrapper">
                 <button class="chatbot-img-btn" aria-label="Hablar con Flor chatbot">
@@ -54,7 +54,7 @@ export function renderHome() {
                     <source src="${bannerVideo}" type="video/mp4">
                 </video>
                 <div class="bg-video-overlay"></div>
-                
+
                 <div class="home-cards-wrapper-new">
                     <a href="/pqrs" class="action-card-new" data-link>
                         <div class="action-card-icon-new">
@@ -79,7 +79,7 @@ export function renderHome() {
                     </a>
                 </div>
             </div>
-            
+
             <!-- Chatbot Window -->
             <div class="chatbot-window" id="chatbot-window">
                 <div class="chatbot-header">
@@ -106,7 +106,7 @@ export function renderHome() {
                     </button>
                 </form>
             </div>
-            
+
         </main>
 
         <footer class="footer-simple">
@@ -130,70 +130,75 @@ export function renderHome() {
     const chatbotInput = document.getElementById('chatbot-input');
     const chatbotMessages = document.getElementById('chatbot-messages');
 
-    if (chatbotBtn && chatbotWindow) {
-        // Open chat
-        chatbotWrapper.addEventListener('click', () => {
-            if (chatbotWrapper.classList.contains('is-open')) return;
-            chatbotWrapper.classList.add('is-open');
-            setTimeout(() => {
-                chatbotWindow.classList.add('is-active');
-                chatbotInput.focus();
-            }, 500); // Wait for the wrapper animation to finish
-        });
+    if (!chatbotBtn || !chatbotWindow) return;
 
-        // Close chat
-        chatbotCloseBtn.addEventListener('click', () => {
-            chatbotWindow.classList.remove('is-active');
-            setTimeout(() => {
-                chatbotWrapper.classList.remove('is-open');
-            }, 300); // Wait for window exit animation
-        });
+    chatbotWrapper.addEventListener('click', () => {
+        if (chatbotWrapper.classList.contains('is-open')) return;
+        chatbotWrapper.classList.add('is-open');
+        setTimeout(() => {
+            chatbotWindow.classList.add('is-active');
+            chatbotInput.focus();
+        }, 500);
+    });
 
-        // Form submit
-        chatbotForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const userText = chatbotInput.value.trim();
-            if(!userText) return;
+    chatbotCloseBtn.addEventListener('click', () => {
+        chatbotWindow.classList.remove('is-active');
+        setTimeout(() => {
+            chatbotWrapper.classList.remove('is-open');
+        }, 300);
+    });
 
-            // Add user message
-            const userMsgDiv = document.createElement('div');
-            userMsgDiv.className = 'chat-message chat-message--user';
-            userMsgDiv.textContent = userText;
-            chatbotMessages.appendChild(userMsgDiv);
-            chatbotInput.value = '';
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+    function appendBotReply({ answer, used_fallback }) {
+        const botMsgDiv = document.createElement('div');
+        botMsgDiv.className = used_fallback
+            ? 'chat-message chat-message--bot chat-message--fallback'
+            : 'chat-message chat-message--bot';
+        botMsgDiv.textContent = answer;
+        chatbotMessages.appendChild(botMsgDiv);
 
-            // Add loading indicator
-            const loadingDiv = document.createElement('div');
-            loadingDiv.className = 'chat-loading';
-            loadingDiv.innerHTML = '<div class="chat-loading-dot"></div><div class="chat-loading-dot"></div><div class="chat-loading-dot"></div>';
-            chatbotMessages.appendChild(loadingDiv);
-            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-
-            try {
-                const res = await chatbotService.sendMessage(userText);
-                
-                // Remove loading
-                chatbotMessages.removeChild(loadingDiv);
-
-                // Add bot message
-                const botMsgDiv = document.createElement('div');
-                botMsgDiv.className = 'chat-message chat-message--bot';
-                botMsgDiv.textContent = res.response || res;
-                chatbotMessages.appendChild(botMsgDiv);
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-
-            } catch (error) {
-                if(chatbotMessages.contains(loadingDiv)) {
-                    chatbotMessages.removeChild(loadingDiv);
-                }
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'chat-message chat-message--bot';
-                errorDiv.style.color = 'var(--color-danger)';
-                errorDiv.textContent = "Lo siento, hubo un error de conexión con el servicio.";
-                chatbotMessages.appendChild(errorDiv);
-                chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
-            }
-        });
+        if (used_fallback) {
+            const cta = document.createElement('a');
+            cta.className = 'chat-message-cta';
+            cta.href = '/pqrs';
+            cta.setAttribute('data-link', '');
+            cta.textContent = 'Radicar PQRSD';
+            chatbotMessages.appendChild(cta);
+        }
     }
+
+    chatbotForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userText = chatbotInput.value.trim();
+        if (!userText) return;
+
+        const userMsgDiv = document.createElement('div');
+        userMsgDiv.className = 'chat-message chat-message--user';
+        userMsgDiv.textContent = userText;
+        chatbotMessages.appendChild(userMsgDiv);
+        chatbotInput.value = '';
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'chat-loading';
+        loadingDiv.innerHTML = '<div class="chat-loading-dot"></div><div class="chat-loading-dot"></div><div class="chat-loading-dot"></div>';
+        chatbotMessages.appendChild(loadingDiv);
+        chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+
+        try {
+            const res = await chatbotService.query(userText);
+            chatbotMessages.removeChild(loadingDiv);
+            appendBotReply(res);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        } catch (error) {
+            if (chatbotMessages.contains(loadingDiv)) {
+                chatbotMessages.removeChild(loadingDiv);
+            }
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'chat-message chat-message--bot';
+            errorDiv.style.color = 'var(--color-danger)';
+            errorDiv.textContent = "Lo siento, hubo un error de conexión con el servicio.";
+            chatbotMessages.appendChild(errorDiv);
+            chatbotMessages.scrollTop = chatbotMessages.scrollHeight;
+        }
+    });
 }
