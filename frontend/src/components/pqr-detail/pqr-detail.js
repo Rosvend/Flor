@@ -65,11 +65,14 @@ function buildDetailHTML(pqr) {
         .join('');
 
     // Precedente y Ciudadano (Mocks para el MVP si no hay en el backend)
-    const precedente = pqr.precedente || {
-        id: 'RAD-AUTO-001',
-        resumen: 'Respuesta sugerida basada en casos similares de ' + (analisis.secretaria_asignada || 'Gestión General'),
-        similitud: 85
-    };
+    const precedenteHTML = `
+        <div id="precedente-container">
+            <div class="pqr-panel-section__label">
+                <span>Buscando precedentes...</span>
+                <div class="pqr-loading__spinner" style="width:14px; height:14px; border-width:2px; margin-left: 8px;"></div>
+            </div>
+        </div>
+    `;
 
     const ciudadano = pqr.infoCiudadano || {
         historialLimpio: true,
@@ -185,29 +188,10 @@ function buildDetailHTML(pqr) {
         <aside class="pqr-right-panel" aria-label="Información adicional">
 
             <!-- Precedente encontrado -->
-            <div>
-                <div class="pqr-panel-section__label">
-                    <span>Precedente encontrado</span>
-                    <span class="pqr-panel-section__label-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M12 8h.01" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
-                    </span>
-                </div>
-
-                <div class="pqr-precedente-card">
-                    <div class="pqr-precedente-card__id">${precedente.id}</div>
-                    <p class="pqr-precedente-card__resumen">${precedente.resumen}</p>
-                    <button class="pqr-precedente-card__link" id="btn-ver-respuesta" aria-label="Ver respuesta del precedente">
-                        Ver respuesta
-                    </button>
-                </div>
-
-                <p class="pqr-similitud-badge">
-                    Sugerencia basada en ${precedente.similitud}% de similitud temática.
-                </p>
-            </div>
+            ${precedenteHTML}
 
             <!-- Info ciudadano -->
-            <div class="pqr-ciudadano-card">
+            <div class="pqr-ciudadano-card" style="margin-top: 1.5rem;">
                 <div class="pqr-ciudadano-card__icon">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                 </div>
@@ -275,6 +259,65 @@ export async function renderPqrDetail(containerEl, pqrId) {
 
     containerEl.innerHTML = buildDetailHTML(pqr);
 
+    // Cargar borrador inteligente dinámicamente
+    let draftData = null;
+    try {
+        draftData = await pqrsListService.getDraft(pqrId);
+        const precContainer = document.getElementById('precedente-container');
+        if (precContainer) {
+            if (draftData && draftData.precedente_id) {
+                precContainer.innerHTML = `
+                    <div class="pqr-panel-section__label">
+                        <span>Precedente encontrado</span>
+                        <span class="pqr-panel-section__label-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M12 8h.01" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+                        </span>
+                    </div>
+
+                    <div class="pqr-precedente-card">
+                        <div class="pqr-precedente-card__id">${draftData.precedente_id}</div>
+                        <p class="pqr-precedente-card__resumen">Respuesta sugerida basada en casos similares de ${pqr.analisis_ia?.secretaria_asignada || 'Gestión General'}</p>
+                        <button class="pqr-precedente-card__link" id="btn-ver-respuesta" aria-label="Ver respuesta del precedente">
+                            Ver respuesta
+                        </button>
+                    </div>
+
+                    <p class="pqr-similitud-badge">
+                        Sugerencia basada en ${draftData.similitud}% de similitud temática.
+                    </p>
+                `;
+                
+                // Rebind event
+                document.getElementById('btn-ver-respuesta')?.addEventListener('click', () => {
+                    const textarea = document.getElementById('pqr-response-textarea');
+                    if (textarea) {
+                        textarea.value = draftData.draft;
+                        textarea.focus();
+                        textarea.style.height = 'auto';
+                        textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
+                    }
+                });
+            } else {
+                precContainer.innerHTML = `
+                    <div class="pqr-panel-section__label">
+                        <span>Sin precedentes claros</span>
+                    </div>
+                    <p style="color:var(--color-text-muted); font-size:0.85rem; margin-top:0.5rem;">${draftData?.draft || 'No se encontraron similitudes mayores al 15%.'}</p>
+                `;
+            }
+        }
+    } catch (e) {
+        console.error("Error loading draft:", e);
+        const precContainer = document.getElementById('precedente-container');
+        if (precContainer) {
+            precContainer.innerHTML = `
+                <div class="pqr-panel-section__label">
+                    <span>Precedentes no disponibles</span>
+                </div>
+            `;
+        }
+    }
+
     // ── Eventos ──────────────────────────────────────────────────
 
     // Confirmar clasificación
@@ -294,16 +337,6 @@ export async function renderPqrDetail(containerEl, pqrId) {
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                 Confirmar clasificación
             `;
-        }
-    });
-
-    // Ver respuesta precedente
-    document.getElementById('btn-ver-respuesta')?.addEventListener('click', () => {
-        const textarea = document.getElementById('pqr-response-textarea');
-        if (textarea) {
-            const analisis = pqr.analisis_ia || {};
-            textarea.value = `[Basado en Precedente Sugerido]\nRespuesta estándar para solicitudes de ${analisis.secretaria_asignada || 'competencia general'}.`;
-            textarea.focus();
         }
     });
 

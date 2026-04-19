@@ -253,6 +253,23 @@ def get_curated_pqr(radicado: str, current_user: User = Depends(get_current_user
     return pqr
 
 
+@router.get("/curated/{radicado}/draft")
+def get_pqr_draft(radicado: str, current_user: User = Depends(get_current_user)):
+    """Busca el precedente más similar y devuelve un borrador de respuesta."""
+    try:
+        use_case = container.get_draft_intelligent_response()
+        result = use_case.execute(radicado, current_user.organization_id)
+        return {
+            "draft": result.draft_text,
+            "precedente_id": result.precedent_id,
+            "similitud": result.similarity_score
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/stats")
 def get_pqrs_stats(current_user: User = Depends(get_current_user)):
     """Returns dashboard statistics filtered by organization."""

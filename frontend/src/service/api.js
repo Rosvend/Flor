@@ -385,6 +385,16 @@ export const pqrsListService = {
             requiresAuth: true,
             data: { respuesta_funcionario: texto, estado: 'CERRADO' }
         });
+    },
+    async getDraft(id) {
+        if (USE_MOCK) {
+            return {
+                draft: "[Basado en Precedente Sugerido RAD-AUTO-001]\nRespuesta estándar para solicitudes de Gestión General.",
+                precedente_id: "RAD-AUTO-001",
+                similitud: 85
+            };
+        }
+        return request(`/pqrs/curated/${id}/draft`, { method: 'GET', requiresAuth: true });
     }
 };
 

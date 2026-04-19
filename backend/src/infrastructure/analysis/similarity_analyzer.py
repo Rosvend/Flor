@@ -80,3 +80,36 @@ class TfidfSimilarityAnalyzer(SimilarityAnalyzerPort):
             return [kw for kw, _ in ranked[:5]]
         except Exception:
             return []
+
+    def find_most_similar(self, target_text: str, candidates: list[dict]) -> tuple[dict, float] | None:
+        if not target_text or len(target_text.strip()) < 5 or not candidates:
+            return None
+
+        # Extract texts from candidates
+        cand_texts = []
+        valid_candidates = []
+        for c in candidates:
+            t = c.get("text", c.get("original_text", c.get("contenido", "")))
+            if t and len(str(t).strip()) > 5:
+                cand_texts.append(str(t))
+                valid_candidates.append(c)
+
+        if not valid_candidates:
+            return None
+
+        all_texts = [target_text] + cand_texts
+
+        try:
+            vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
+            tfidf_matrix = vectorizer.fit_transform(all_texts)
+            # The first row is the target_text, the rest are candidates
+            sim_scores = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
+            
+            best_idx = np.argmax(sim_scores)
+            best_score = float(sim_scores[best_idx])
+            
+            if best_score > 0:
+                return valid_candidates[best_idx], best_score
+            return None
+        except Exception:
+            return None

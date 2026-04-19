@@ -132,6 +132,14 @@ def get_migrate_raw_to_curated():
     )
 
 
+def get_draft_intelligent_response():
+    from src.application.use_cases.draft_intelligent_response import DraftIntelligentResponse
+    return DraftIntelligentResponse(
+        curated_data_lake=curated_data_lake,
+        similarity_analyzer=similarity_analyzer,
+    )
+
+
 cluster_pqrs = ClusterPQRS(
     similarity_analyzer=similarity_analyzer,
     data_lake=raw_data_lake,
