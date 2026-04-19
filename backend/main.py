@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 
 from src.interfaces.http.auth_router import router as auth_router

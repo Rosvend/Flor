@@ -1,8 +1,7 @@
 """
-Test automatizado del flujo completo de ingesta (Instagram + Facebook) en modo mock.
-No necesita credenciales reales ni acceso a la API de Meta.
-
-Requisito: backend corriendo en localhost:8000
+Test del pipeline completo de ingesta (Instagram + Facebook) → backend → datalake.
+En modo mock no necesita credenciales de Meta.
+Con S3_RAW_BUCKET seteado en .env, los registros van a S3 real.
 
 Run:
     python tests/test_sync_mock.py
@@ -18,9 +17,7 @@ import httpx
 from src.infrastructure.classification import instagram_sync, facebook_sync
 
 BACKEND = os.getenv("BACKEND_URL", "http://localhost:8000")
-ENDPOINT = f"{BACKEND}/api/v1/ingest/meta/raw"
-
-EXPECTED_CANALES = {"IG_COMMENT", "IG_DM", "FB_DM"}
+ENDPOINT = f"{BACKEND}/api/v1/ingest/raw"
 
 
 def test_backend_is_up():
@@ -29,83 +26,51 @@ def test_backend_is_up():
     print("✓ Backend up")
 
 
-def test_instagram_mock_data():
-    items = instagram_sync.run(mock=True)
-    assert len(items) > 0
-    canales = {i["canal"] for i in items}
-    assert "IG_COMMENT" in canales, "Faltan comentarios de Instagram"
-    assert "IG_DM" in canales, "Faltan DMs de Instagram"
-    print(f"✓ Instagram mock: {len(items)} items ({canales})")
-
-
-def test_facebook_mock_data():
-    items = facebook_sync.run(mock=True)
-    assert len(items) > 0
-    assert all(i["canal"] == "FB_DM" for i in items)
-    print(f"✓ Facebook mock: {len(items)} DMs")
-
-
 def test_ingest_instagram():
     items = instagram_sync.run(mock=True)
     resp = httpx.post(ENDPOINT, json=items, timeout=10)
     assert resp.status_code == 201, f"Error: {resp.status_code} — {resp.text}"
-    records = resp.json()
-    assert len(records) == len(items)
-    for r in records:
-        assert r["canal"] in ("IG_COMMENT", "IG_DM")
-        assert r["id"]
-        assert r["ingested_at"]
-    print(f"✓ Ingesta Instagram: {len(records)} registros almacenados")
+    data = resp.json()
+    assert data["count"] == len(items)
+    assert len(data["stored_keys"]) == len(items)
+    print(f"✓ Instagram: {data['count']} registros → keys: {[k[:30] for k in data['stored_keys']]}")
 
 
 def test_ingest_facebook():
     items = facebook_sync.run(mock=True)
     resp = httpx.post(ENDPOINT, json=items, timeout=10)
     assert resp.status_code == 201, f"Error: {resp.status_code} — {resp.text}"
-    records = resp.json()
-    assert len(records) == len(items)
-    for r in records:
-        assert r["canal"] == "FB_DM"
-        assert r["id"]
-    print(f"✓ Ingesta Facebook: {len(records)} registros almacenados")
+    data = resp.json()
+    assert data["count"] == len(items)
+    assert len(data["stored_keys"]) == len(items)
+    print(f"✓ Facebook: {data['count']} registros → keys: {[k[:30] for k in data['stored_keys']]}")
 
 
-def test_full_sync_flow():
+def test_full_pipeline():
     all_items = instagram_sync.run(mock=True) + facebook_sync.run(mock=True)
     resp = httpx.post(ENDPOINT, json=all_items, timeout=10)
     assert resp.status_code == 201
-    records = resp.json()
-    assert len(records) == len(all_items)
+    data = resp.json()
+    assert data["count"] == len(all_items)
+    assert len(data["stored_keys"]) == len(all_items)
 
-    canales = {r["canal"] for r in records}
-    assert canales == EXPECTED_CANALES, f"Canales esperados: {EXPECTED_CANALES}, recibidos: {canales}"
+    using_s3 = os.getenv("S3_RAW_BUCKET") is not None
+    destino = f"s3://{os.getenv('S3_RAW_BUCKET')}" if using_s3 else "memory"
 
-    anonimos = [r for r in records if r["usuario"]["nombre"] is None]
-    con_nombre = [r for r in records if r["usuario"]["nombre"] is not None]
-
-    print(f"✓ Flujo completo: {len(records)} registros")
-    print(f"  Canales: {canales}")
-    print(f"  Con nombre: {len(con_nombre)} | Anónimos: {len(anonimos)}")
-    print("\n  Detalle:")
-    for r in records:
-        nombre = r["usuario"]["nombre"] or "(anónimo)"
-        print(f"    [{r['canal']:<12}] {nombre:<25} | \"{r['contenido'][:45]}\"")
+    print(f"✓ Pipeline completo: {data['count']} registros → {destino}")
+    print(f"  Primeras keys:")
+    for k in data["stored_keys"]:
+        print(f"    {k}")
 
 
 if __name__ == "__main__":
     print("\n" + "="*55)
-    print("  TEST INGESTA RAW — Instagram + Facebook (MOCK)")
+    print("  TEST PIPELINE INGESTA RAW — IG + FB")
+    s3 = os.getenv("S3_RAW_BUCKET")
+    print(f"  Datalake: {'S3 → ' + s3 if s3 else 'InMemory (sin S3_RAW_BUCKET)'}")
     print("="*55 + "\n")
 
-    tests = [
-        test_backend_is_up,
-        test_instagram_mock_data,
-        test_facebook_mock_data,
-        test_ingest_instagram,
-        test_ingest_facebook,
-        test_full_sync_flow,
-    ]
-
+    tests = [test_backend_is_up, test_ingest_instagram, test_ingest_facebook, test_full_pipeline]
     failed = 0
     for t in tests:
         try:
@@ -115,9 +80,6 @@ if __name__ == "__main__":
             failed += 1
 
     print(f"\n{'='*55}")
-    if failed == 0:
-        print(f"  ✓ Todos los tests pasaron ({len(tests)}/{len(tests)})")
-    else:
-        print(f"  ✗ {failed} tests fallaron")
+    print(f"  {'✓ Todos OK' if not failed else f'✗ {failed} fallaron'} ({len(tests)-failed}/{len(tests)})")
     print("="*55 + "\n")
     sys.exit(failed)

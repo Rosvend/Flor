@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel
 
 from src.application.dtos.ingest_dtos import IngestRawMessagesInput
@@ -13,7 +13,7 @@ class IngestRawResponse(BaseModel):
 
 
 @router.post("/raw", response_model=IngestRawResponse, status_code=201)
-def ingest_raw(records: list[dict]) -> IngestRawResponse:
+def ingest_raw(records: list[dict] = Body(...)) -> IngestRawResponse:
     """
     Receives raw records from any source (Meta API, scraping, etc.)
     and stores them as-is in S3. No transformation, no classification.

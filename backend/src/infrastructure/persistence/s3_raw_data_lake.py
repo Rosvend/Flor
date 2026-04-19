@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime, timezone
 
 import boto3
+from botocore.config import Config
 
 from src.domain.ports.raw_data_lake import RawDataLakePort
 
@@ -17,6 +18,7 @@ class S3RawDataLake(RawDataLakePort):
             region_name=os.getenv("AWS_REGION", "us-east-1"),
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            config=Config(connect_timeout=5, read_timeout=10, retries={"max_attempts": 1}),
         )
 
     def store(self, records: list[dict]) -> list[str]:

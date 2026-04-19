@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
-INGEST_ENDPOINT = f"{BACKEND_URL}/api/v1/ingest/meta/raw"
+INGEST_ENDPOINT = f"{BACKEND_URL}/api/v1/ingest/raw"
 
 
 def post_to_datalake(items: list[dict]) -> list[dict]:
