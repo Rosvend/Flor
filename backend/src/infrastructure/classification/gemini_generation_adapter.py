@@ -38,6 +38,9 @@ class GeminiGenerationAdapter(GenerationPort):
                     system_instruction=system,
                     temperature=self._temperature,
                     max_output_tokens=max_tokens,
+                    # gemini-2.5-flash spends output tokens on internal reasoning by default;
+                    # disable it so the full budget goes to the user-facing reply.
+                    thinking_config=types.ThinkingConfig(thinking_budget=0),
                 ),
             )
         except Exception as exc:
