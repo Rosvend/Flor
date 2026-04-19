@@ -34,14 +34,16 @@ def init_db() -> None:
     );
 
     CREATE TABLE IF NOT EXISTS departments (
-        id          VARCHAR(100) PRIMARY KEY,
-        name        TEXT NOT NULL,
-        type        VARCHAR(50), 
-        aliases     TEXT[],      
-        scope       TEXT,        
-        parent_id   VARCHAR(100) REFERENCES departments(id),
-        contact     JSONB DEFAULT '{}'::jsonb
+        id              VARCHAR(100) PRIMARY KEY,
+        name            TEXT NOT NULL,
+        type            VARCHAR(50),
+        aliases         TEXT[],
+        scope           TEXT,
+        parent_id       VARCHAR(100) REFERENCES departments(id),
+        contact         JSONB DEFAULT '{}'::jsonb,
+        organization_id INTEGER
     );
+    ALTER TABLE departments ADD COLUMN IF NOT EXISTS organization_id INTEGER;
     """
     with get_engine().begin() as conn:
         conn.execute(text(ddl))
