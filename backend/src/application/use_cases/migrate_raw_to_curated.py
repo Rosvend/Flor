@@ -46,51 +46,56 @@ class MigrateRawToCurated:
 
             # 2. Usar NLP para saber si es PQRSD
             if self._classifier.is_pqrs(contenido):
-                # Es una PQRS! La mapeamos al formato CuratedRecord
+                # Es una PQRS! La mapeamos al formato canónico
                 
                 # Extraer info del usuario si existe
-                raw_user = raw_record.get("usuario", {})
-                usuario = {
-                    "nombre": raw_user.get("nombre") or raw_user.get("name") or "Anónimo",
-                    "id_meta": raw_user.get("id_meta") or raw_user.get("id"),
-                }
-                
-                # Mapear metadatos
+                raw_user = raw_record.get("usuario", {}) or raw_record.get("ciudadano", {})
                 raw_metadata = raw_record.get("metadata", {})
                 
                 # Clasificar el tipo
                 classification_result = self._classifier.pre_classify(contenido)
-                tipo = classification_result.tipo
-                
-                # Construir el diccionario validado para IngestCuratedMessages
-                raw_user = raw_record.get("usuario", {})
-                tipo_map = {"peticion": "peticion", "queja": "queja", "reclamo": "reclamo",
-                            "solicitud": "solicitud", "denuncia": "denuncia"}
-                asunto = tipo_map.get((tipo or "").lower(), "peticion")
+                tipo = classification_result.tipo or "peticion"
 
+                # Construir el diccionario en formato canónico
                 curated_dict = {
-                    "radicado":                    None,  # assigned by data lake
-                    "timestamp_radicacion":        datetime.now(timezone.utc).isoformat(),
-                    "canal":                       raw_record.get("canal", "META_DM"),
-                    "estado":                      "abierto",
-                    "anonima":                     True,  # raw social media: always anonymous
-                    "ciudadano": {
-                        "pais":               "Colombia",
-                        "departamento":       None,
-                        "ciudad":             None,
-                        "direccion":          None,
-                        "correo_electronico": None,
-                        "telefono":           raw_user.get("telefono"),
-                        "id_meta":            raw_user.get("id_meta") or raw_user.get("id"),
+                    "radicado":             None,  # assigned by data lake
+                    "timestamp_radicacion": datetime.now(timezone.utc).isoformat(),
+                    "tipo":                 tipo.capitalize(),
+                    "canal":                raw_record.get("canal", "META_DM"),
+                    "anonima":              None,  # raw social media: unknown
+                    "estado":               "abierto",
+                    "organization_id":      raw_record.get("organization_id", 1),
+                    "usuario": {
+                        "nombre":    raw_user.get("nombre") or raw_user.get("nombres") or None,
+                        "documento": None,
+                        "telefono":  raw_user.get("telefono"),
+                        "email":     raw_user.get("email") or raw_user.get("correo_electronico"),
                     },
-                    "asunto_principal":            asunto,
-                    "atencion_preferencial":       "ninguna",
-                    "autoriza_notificacion_correo": False,
-                    "descripcion_detallada":       contenido,
+                    "ubicacion": {
+                        "pais":            "Colombia",
+                        "departamento":    None,
+                        "ciudad":          None,
+                        "direccion":       None,
+                        "direccion_hecho": None,
+                    },
+                    "contenido":            contenido,
                     "metadata": {
-                        "post_id":      raw_metadata.get("post_id"),
-                        "created_time": raw_metadata.get("created_time"),
+                        "persona":                None,
+                        "genero":                 None,
+                        "atencion_preferencial":  None,
+                        "es_solicitud_informacion": None,
+                        "autoriza_notificacion":  None,
+                        "post_id":                raw_metadata.get("post_id"),
+                        "created_time":           raw_metadata.get("created_time"),
                     },
+                    # Pipeline fields — initially empty
+                    "analisis_ia":          None,
+                    "resumen_ia":           None,
+                    "borrador_respuesta":   None,
+                    "tipo_confirmado":      None,
+                    "respuesta":            None,
+                    "timestamp_respuesta":  None,
+                    "respondido_por":       None,
                 }
                 curated_records_to_insert.append(curated_dict)
                 migrated_keys.append(key)

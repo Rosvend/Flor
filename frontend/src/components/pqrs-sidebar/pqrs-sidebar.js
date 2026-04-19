@@ -1,6 +1,7 @@
 import './pqrs-sidebar.css';
 import { getActivePqrs, getDashboardData } from '../../service/api.js';
 import { router } from '../../app/router.js';
+import { storage } from '../../service/storage.js';
 
 /* ================================================================
    PQRS-SIDEBAR.JS — Componente de bandeja lateral
@@ -55,12 +56,13 @@ function renderItem(pqr, isActive) {
     const fechaVence = d.toISOString();
 
     const vence = getVenceBadge(fechaVence);
-    const tipoClass = getTipoBadgeClass(pqr.tipo);
+    const pqrTipo = pqr.tipo || pqr.asunto_principal || 'Peticion';
+    const tipoClass = getTipoBadgeClass(pqrTipo);
     const activeClass = isActive ? 'pqrs-item--active' : '';
-    const pqrTipo = pqr.tipo || 'Peticion';
     const tipoLabel = pqrTipo.charAt(0).toUpperCase() + pqrTipo.slice(1).toLowerCase();
     
     // Asunto: Usamos el texto mejorado de IA o los primeros 60 caracteres del contenido
+    // Backward compat: read from either new (contenido) or legacy (descripcion_detallada)
     const contenidoStr = pqr.contenido || pqr.descripcion_detallada || 'Sin contenido detallado';
     const asunto = pqr.analisis_ia?.texto_mejorado || contenidoStr.substring(0, 60) + '...';
     const confianza = pqr.analisis_ia ? 99 : 0; // Placeholder confianza
@@ -200,6 +202,7 @@ export async function renderPqrsSidebar(containerEl, options = {}) {
 
     const btnLogout = containerEl.querySelector('#sidebar-btn-logout');
     btnLogout?.addEventListener('click', () => {
+        storage.clear();
         router.navigate('/');
     });
 }

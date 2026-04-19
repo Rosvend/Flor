@@ -5,6 +5,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from src.domain.ports.notification_port import NotificationPort
+from src.interfaces.schemas.pqrsd_schemas import (
+    get_citizen_email,
+    get_citizen_name,
+    get_tipo,
+    get_autoriza_notificacion,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,16 +54,16 @@ def _send(to: str, subject: str, body: str) -> None:
 class GmailSMTPAdapter(NotificationPort):
 
     def notify_created(self, record: dict) -> None:
-        correo = record.get("ciudadano", {}).get("correo_electronico")
-        if not correo or not record.get("autoriza_notificacion_correo"):
+        correo = get_citizen_email(record)
+        if not correo or not get_autoriza_notificacion(record):
             return
 
         radicado  = record.get("radicado", "N/A")
-        asunto    = _ASUNTO_LABELS.get(record.get("asunto_principal", ""), "Solicitud")
+        tipo_raw  = get_tipo(record)
+        asunto    = _ASUNTO_LABELS.get(tipo_raw.lower(), tipo_raw.capitalize())
         canal     = record.get("canal", "N/A")
         fecha     = record.get("timestamp_radicacion", "N/A")[:10]
-        ciudadano = record.get("ciudadano", {})
-        nombre    = f"{ciudadano.get('nombres','')} {ciudadano.get('apellidos','')}".strip() or "ciudadano/a"
+        nombre    = get_citizen_name(record)
 
         body = f"""\
 Estimado/a {nombre},
@@ -88,16 +94,16 @@ Conserve su número de radicado para cualquier consulta o seguimiento.
             logger.error("Error enviando notificación 'creada': %s", exc)
 
     def notify_resolved(self, record: dict) -> None:
-        correo = record.get("ciudadano", {}).get("correo_electronico")
-        if not correo or not record.get("autoriza_notificacion_correo"):
+        correo = get_citizen_email(record)
+        if not correo or not get_autoriza_notificacion(record):
             return
 
         radicado  = record.get("radicado", "N/A")
-        asunto    = _ASUNTO_LABELS.get(record.get("asunto_principal", ""), "Solicitud")
+        tipo_raw  = get_tipo(record)
+        asunto    = _ASUNTO_LABELS.get(tipo_raw.lower(), tipo_raw.capitalize())
         fecha_rad = record.get("timestamp_radicacion", "N/A")[:10]
         fecha_res = record.get("timestamp_respuesta", "N/A")[:10]
-        ciudadano = record.get("ciudadano", {})
-        nombre    = f"{ciudadano.get('nombres','')} {ciudadano.get('apellidos','')}".strip() or "ciudadano/a"
+        nombre    = get_citizen_name(record)
 
         body = f"""\
 Estimado/a {nombre},

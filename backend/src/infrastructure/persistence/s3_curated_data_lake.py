@@ -79,14 +79,25 @@ class S3CuratedDataLake(CuratedDataLakePort):
                         pass
         return direct
 
-    def update_by_radicado(self, radicado: str, record: dict) -> None:
+    def update_by_radicado(self, radicado: str, updates: dict) -> dict | None:
+        """Merge-update: reads the existing record, merges `updates` on top,
+        and writes the result back. Returns the merged record."""
         key = self._find_key(radicado)
+        # Read existing record (if any) to merge
+        existing = {}
+        try:
+            res = self._client.get_object(Bucket=self._bucket, Key=key)
+            existing = json.loads(res["Body"].read().decode())
+        except Exception:
+            pass
+        existing.update(updates)
         self._client.put_object(
             Bucket=self._bucket, Key=key,
-            Body=json.dumps(record, ensure_ascii=False),
+            Body=json.dumps(existing, ensure_ascii=False),
             ContentType="application/json",
         )
         self._cache_time = 0.0
+        return existing
 
     def get_by_radicado(self, radicado: str) -> dict | None:
         # Try direct key first (new records stored as curated/{radicado}.json)

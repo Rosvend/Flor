@@ -7,6 +7,7 @@ from fastapi import Body
 
 from src.application.dtos.ingest_curated_dtos import IngestCuratedMessagesInput
 from src.infrastructure import container
+from src.interfaces.schemas.pqrsd_schemas import get_contenido, is_anonymous
 
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
@@ -20,7 +21,7 @@ def _ai_and_notify(keys: list[str], records: list[dict]) -> None:
     try:
         process_pqrs = container.get_process_pqrs()
         for key, record in zip(keys, records):
-            texto = record.get("descripcion_detallada", "")
+            texto = get_contenido(record)
             if len(texto) > 5:
                 from src.application.dtos.pqrs_dtos import ProcessPQRSInput
                 analisis = process_pqrs.execute(ProcessPQRSInput(text=texto))
@@ -80,7 +81,7 @@ def ingest_curated(
 def _notify_created_batch(records: list[dict]) -> None:
     try:
         for record in records:
-            if not record.get("anonima"):
+            if not is_anonymous(record):
                 container.notifier.notify_created(record)
     except Exception as exc:
         import logging

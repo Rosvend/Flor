@@ -15,6 +15,7 @@ from src.application.use_cases.ingest_raw_messages import IngestRawMessages
 from src.application.use_cases.query_flor_chatbot import QueryFlorChatbot
 from src.application.use_cases.summarize_pqrsd import SummarizePQRSD
 from src.application.use_cases.draft_response_pqrsd import DraftResponsePQRSD
+from src.application.use_cases.ingest_email_pqrs import IngestEmailPQRS
 from src.infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.auth.jwt_token_generator import JwtTokenGenerator
 from src.infrastructure.knowledge_base.chroma_knowledge_base import ChromaKnowledgeBase
@@ -159,6 +160,17 @@ cluster_pqrs = ClusterPQRS(
     similarity_analyzer=similarity_analyzer,
     data_lake=raw_data_lake,
 )
+
+# ── Gmail Integration ────────────────────────────────────────────────────────
+from src.infrastructure.connectors.gmail_connector import GmailConnector
+gmail_connector = GmailConnector()
+
+def get_ingest_email_pqrs():
+    return IngestEmailPQRS(
+        email_connector=gmail_connector,
+        process_pqrs=get_process_pqrs(),
+        ingest_curated=ingest_curated_messages
+    )
 
 # ── Chatbot (F7) ────────────────────────────────────────────────────────────
 _REPO_ROOT = Path(__file__).resolve().parents[3]
