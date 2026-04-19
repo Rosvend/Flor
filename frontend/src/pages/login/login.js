@@ -30,6 +30,10 @@ export function renderLogin() {
                             <label for="password" class="form-label form-label--required">Contraseña</label>
                             <input type="password" id="password" class="form-input" placeholder="••••••••" required>
                         </div>
+
+                        <p class="text-secondary text-sm" style="margin-top: -0.5rem;">
+                            Usuario de prueba: demo@flor.local / Flor123!
+                        </p>
                         
                         <div class="form-actions">
                             <button type="submit" class="btn btn--accent btn--lg login-btn">Entrar</button>
