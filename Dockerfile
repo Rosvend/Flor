@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     qpdf \
     curl \
     build-essential \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # uv is our Python package manager. Install into the system python so it's on PATH.
