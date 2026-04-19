@@ -17,5 +17,5 @@ class InMemoryRawDataLake(RawDataLakePort):
             keys.append(key)
         return keys
 
-    def all(self) -> list[dict]:
+    def get_all(self) -> list[dict]:
         return list(self._store)

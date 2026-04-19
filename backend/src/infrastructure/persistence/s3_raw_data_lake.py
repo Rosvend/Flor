@@ -36,3 +36,24 @@ class S3RawDataLake(RawDataLakePort):
             keys.append(key)
 
         return keys
+
+    def get_all(self) -> list[dict]:
+        records: list[dict] = []
+        try:
+            paginator = self._client.get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=self._bucket, Prefix=self._prefix):
+                if "Contents" not in page:
+                    continue
+                
+                for obj in page["Contents"]:
+                    if not obj["Key"].endswith(".json"):
+                        continue
+                        
+                    response = self._client.get_object(Bucket=self._bucket, Key=obj["Key"])
+                    content = response["Body"].read().decode("utf-8")
+                    data = json.loads(content)
+                    records.append(data)
+        except Exception as e:
+            print(f"Error recuperando datos de S3: {e}")
+            
+        return records

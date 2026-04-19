@@ -18,12 +18,26 @@ class TfidfSimilarityAnalyzer(SimilarityAnalyzerPort):
         if len(pqrs_list) < 2:
             return []
 
-        texts = [p.get("text", p.get("original_text", "")) for p in pqrs_list]
-        ids = list(range(len(texts)))
+        # Extraer y filtrar textos que no estén vacíos
+        raw_texts = [
+            p.get("text", p.get("original_text", p.get("contenido", ""))) 
+            for p in pqrs_list
+        ]
+        valid_indices = [i for i, t in enumerate(raw_texts) if len(str(t).strip()) > 5]
+        
+        if len(valid_indices) < 2:
+            return []
 
-        vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
-        tfidf_matrix = vectorizer.fit_transform(texts)
-        sim_matrix = cosine_similarity(tfidf_matrix)
+        texts = [str(raw_texts[i]) for i in valid_indices]
+        ids = [valid_indices[i] for i in range(len(valid_indices))]
+
+        try:
+            vectorizer = TfidfVectorizer(max_features=5000, ngram_range=(1, 2))
+            tfidf_matrix = vectorizer.fit_transform(texts)
+            sim_matrix = cosine_similarity(tfidf_matrix)
+        except ValueError:
+            # Captura "empty vocabulary" si los textos no tienen palabras útiles
+            return []
 
         visited: set[int] = set()
         clusters: list[dict] = []

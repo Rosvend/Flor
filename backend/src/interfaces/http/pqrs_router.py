@@ -11,7 +11,8 @@ router = APIRouter(prefix="/pqrs", tags=["pqrs"])
 # ── Schemas ──────────────────────────────────────────────────────────────────
 
 class AnalyzeRequest(BaseModel):
-    text: str
+    text: Optional[str] = None
+    contenido: Optional[str] = None
 
 
 class AnalyzeResponse(BaseModel):
@@ -51,8 +52,12 @@ def analyze_pqrs(request: AnalyzeRequest) -> AnalyzeResponse:
     - Texto mejorado (Gemini + Manual V5)
     """
     try:
+        input_text = request.text or request.contenido
+        if not input_text:
+            raise HTTPException(status_code=422, detail="Debe proporcionar 'text' o 'contenido'.")
+            
         process_pqrs = container.get_process_pqrs()
-        result = process_pqrs.execute(ProcessPQRSInput(text=request.text))
+        result = process_pqrs.execute(ProcessPQRSInput(text=input_text))
         return AnalyzeResponse(
             original_text=result.original_text,
             improved_text=result.improved_text,
@@ -65,11 +70,29 @@ def analyze_pqrs(request: AnalyzeRequest) -> AnalyzeResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/clusters", response_model=ClusterResponse)
-def cluster_pqrs(records: list[dict] = Body(...)) -> ClusterResponse:
+@router.get("/clusters", response_model=ClusterResponse)
+def get_pqrs_clusters() -> ClusterResponse:
     """
-    Recibe una lista de PQRS (desde S3 u otra fuente) y agrupa las similares.
-    Detecta problemas raíz cuando un grupo supera las 20 PQRS.
+    Recupera TODAS las PQRS directamente desde el bucket de S3,
+    las agrupa por similitud y detecta problemas raíz.
+    """
+    try:
+        result = container.cluster_pqrs.execute()
+        return ClusterResponse(
+            total_pqrs=result.total_pqrs,
+            clusters_found=result.clusters_found,
+            root_problems=result.root_problems,
+            message=result.message,
+            clusters=result.clusters,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/clusters", response_model=ClusterResponse)
+def post_pqrs_clusters(records: list[dict] = Body(...)) -> ClusterResponse:
+    """
+    Agrupa una lista de PQRS enviada manualmente en el cuerpo de la petición.
     
     Body esperado: [{"text": "..."}, {"text": "..."}, ...]
     """

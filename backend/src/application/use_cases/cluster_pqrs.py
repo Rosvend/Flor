@@ -14,7 +14,10 @@ class ClusterPQRS:
         self._similarity = similarity_analyzer
         self._data_lake = data_lake
 
-    def execute(self, pqrs_records: list[dict]) -> ClusterPQRSOutput:
+    def execute(self, pqrs_records: list[dict] = None) -> ClusterPQRSOutput:
+        if pqrs_records is None:
+            pqrs_records = self._data_lake.get_all()
+
         if len(pqrs_records) < 2:
             return ClusterPQRSOutput(
                 total_pqrs=len(pqrs_records),
