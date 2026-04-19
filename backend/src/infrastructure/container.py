@@ -161,13 +161,13 @@ cluster_pqrs = ClusterPQRS(
     data_lake=raw_data_lake,
 )
 
-# ── Gmail Integration ────────────────────────────────────────────────────────
-from src.infrastructure.connectors.gmail_connector import GmailConnector
-gmail_connector = GmailConnector()
+# ── Email Ingestion (IMAP) ───────────────────────────────────────────────────
+from src.infrastructure.connectors.imap_connector import ImapEmailConnector
+email_connector = ImapEmailConnector()
 
 def get_ingest_email_pqrs():
     return IngestEmailPQRS(
-        email_connector=gmail_connector,
+        email_connector=email_connector,
         process_pqrs=get_process_pqrs(),
         ingest_curated=ingest_curated_messages
     )
