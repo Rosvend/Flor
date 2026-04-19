@@ -12,10 +12,13 @@ from src.infrastructure.auth.bcrypt_password_hasher import BcryptPasswordHasher
 from src.infrastructure.auth.jwt_token_generator import JwtTokenGenerator
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from src.infrastructure.knowledge_base.chroma_knowledge_base import ChromaKnowledgeBase
 from src.infrastructure.knowledge_base.document_ingestion_service import (
     DocumentIngestionService,
 )
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 =======
