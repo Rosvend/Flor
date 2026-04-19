@@ -2,6 +2,51 @@ import './pqr-detail.css';
 import { getPqrDetails, pqrsListService } from '../../service/api.js';
 import { TIPO_PQRS } from '../../service/pqrs-mock.js';
 
+const ALL_TAGS = [
+    'Banco Distrital de las Oportunidades',
+    'Denuncia',
+    'Despacho Alcalde',
+    'Petición',
+    'Queja',
+    'Reclamo',
+    'Secretaría Privada',
+    'Secretaría de Comunicaciones',
+    'Secretaría de Cultura Ciudadana',
+    'Secretaría de Desarrollo Económico',
+    'Secretaría de Educación',
+    'Secretaría de Gestión Humana y Servicio a la Ciudadanía',
+    'Secretaría de Gestión y Control Territorial',
+    'Secretaría de Gobierno y Gestión del Gabinete',
+    'Secretaría de Hacienda',
+    'Secretaría de Inclusión Social, Familia y Derechos Humanos',
+    'Secretaría de Infraestructura Física',
+    'Secretaría de la Juventud',
+    'Secretaría de las Mujeres',
+    'Secretaría de Medio Ambiente',
+    'Secretaría de Movilidad',
+    'Secretaría de Participación Ciudadana',
+    'Secretaría de Salud',
+    'Secretaría de Seguridad y Convivencia',
+    'Secretaría de Suministros y Servicios',
+    'Subsecretaría de Creación y Fortalecimiento Empresarial',
+    'Subsecretaría de Productividad, Competitividad y Relaciones Internacionales',
+    'Subsecretaría de Turismo',
+    'Sugerencia',
+    'Vicealcaldía de Creación y Desarrollo Económico',
+    'Vicealcaldía de Educación, Cultura, Participación, Recreación y Deporte',
+    'Vicealcaldía de Gestión Territorial',
+    'Vicealcaldía de Gobernabilidad y Seguridad',
+    'Vicealcaldía de Hábitat, Movilidad, Infraestructura y Sostenibilidad',
+    'Vicealcaldía de Salud, Inclusión y Familia',
+];
+
+function normalizeTag(raw) {
+    if (!raw) return raw;
+    const norm = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const r = norm(raw);
+    return ALL_TAGS.find(t => norm(t) === r) || raw;
+}
+
 /* ================================================================
    PQR-DETAIL.JS — Componente de detalle de una PQR
    ================================================================
@@ -97,7 +142,10 @@ function buildDetailHTML(pqr) {
 
     const tematicasHTML = capas.tematicas
         .filter(t => t)
-        .map(t => `<span class="pqr-tematica-tag">${t}</span>`)
+        .map(t => {
+            const canonical = normalizeTag(t);
+            return `<span class="pqr-tematica-tag pqr-tematica-tag--removable" data-tag="${canonical}">${canonical}<button class="pqr-tematica-tag__remove" aria-label="Eliminar ${canonical}" data-tag="${canonical}"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></span>`;
+        })
         .join('');
 
     // F5 — separate "Resumen generado por IA" card, hidden until summary exists.
@@ -148,9 +196,6 @@ function buildDetailHTML(pqr) {
                     <h1 class="pqr-detail__radicado">${pqr.radicado}</h1>
                 </div>
                 <div class="pqr-detail__header-actions">
-                    <button class="btn--reclasificar" id="btn-reclasificar" aria-label="Reclasificar esta PQR">
-                        Reclasificar
-                    </button>
                     <button class="btn--confirmar" id="btn-confirmar" aria-label="Confirmar clasificación">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                         Confirmar clasificación
@@ -194,10 +239,16 @@ function buildDetailHTML(pqr) {
                     </div>
                     <div class="pqr-tematicas" id="tematicas-container">
                         ${tematicasHTML}
-                        <button class="pqr-tematica-add" id="btn-add-tematica" aria-label="Añadir temática">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                            Añadir
-                        </button>
+                        <div class="pqr-tematica-add-wrapper" id="tematica-add-wrapper">
+                            <button class="pqr-tematica-add" id="btn-add-tematica" aria-label="Añadir temática">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                                Añadir
+                            </button>
+                            <div class="pqr-tematica-dropdown" id="tematica-dropdown" hidden>
+                                <input type="text" class="pqr-tematica-search" id="tematica-search" placeholder="Buscar etiqueta..." autocomplete="off">
+                                <ul class="pqr-tematica-list" id="tematica-list"></ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -308,6 +359,89 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
+/* ── Tematicas editor ────────────────────────────────────────────── */
+
+function setupTematicasEditor(container) {
+    const activeTags = new Set(
+        Array.from(container.querySelectorAll('.pqr-tematica-tag--removable'))
+            .map(el => el.dataset.tag)
+    );
+
+    const addWrapper = container.querySelector('#tematica-add-wrapper');
+    const dropdown = container.querySelector('#tematica-dropdown');
+    const searchInput = container.querySelector('#tematica-search');
+    const list = container.querySelector('#tematica-list');
+    const addBtn = container.querySelector('#btn-add-tematica');
+
+    function highlight(text, q) {
+        if (!q) return text;
+        const idx = text.toLowerCase().indexOf(q);
+        if (idx === -1) return text;
+        return text.slice(0, idx) + `<mark class="pqr-tematica-mark">${text.slice(idx, idx + q.length)}</mark>` + text.slice(idx + q.length);
+    }
+
+    function renderList(filter = '') {
+        const q = filter.toLowerCase().trim();
+        const items = ALL_TAGS.filter(t => !activeTags.has(t) && t.toLowerCase().includes(q));
+        list.innerHTML = items.length
+            ? items.map(t => `<li class="pqr-tematica-option" data-tag="${t}">${highlight(t, q)}</li>`).join('')
+            : `<li class="pqr-tematica-option pqr-tematica-option--empty">Sin resultados</li>`;
+    }
+
+    function addTag(tag) {
+        if (activeTags.has(tag)) return;
+        activeTags.add(tag);
+        const span = document.createElement('span');
+        span.className = 'pqr-tematica-tag pqr-tematica-tag--removable';
+        span.dataset.tag = tag;
+        span.innerHTML = `${tag}<button class="pqr-tematica-tag__remove" aria-label="Eliminar ${tag}" data-tag="${tag}"><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`;
+        span.querySelector('.pqr-tematica-tag__remove').addEventListener('click', () => removeTag(tag, span));
+        container.insertBefore(span, addWrapper);
+        closeDropdown();
+    }
+
+    function removeTag(tag, el) {
+        activeTags.delete(tag);
+        el.remove();
+    }
+
+    function openDropdown() {
+        renderList();
+        dropdown.hidden = false;
+        searchInput.value = '';
+        requestAnimationFrame(() => searchInput.focus());
+    }
+
+    function closeDropdown() {
+        dropdown.hidden = true;
+    }
+
+    container.querySelectorAll('.pqr-tematica-tag__remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tag = btn.dataset.tag;
+            const tagEl = btn.closest('.pqr-tematica-tag--removable');
+            removeTag(tag, tagEl);
+        });
+    });
+
+    addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.hidden ? openDropdown() : closeDropdown();
+    });
+
+    searchInput.addEventListener('input', () => renderList(searchInput.value));
+    searchInput.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDropdown(); });
+
+    list.addEventListener('click', (e) => {
+        const li = e.target.closest('.pqr-tematica-option');
+        if (li && li.dataset.tag) addTag(li.dataset.tag);
+    });
+
+    document.addEventListener('click', function onOutside(e) {
+        if (!addWrapper.contains(e.target)) closeDropdown();
+    });
+}
+
 /* ── Punto de entrada ────────────────────────────────────────────── */
 
 /**
@@ -343,6 +477,9 @@ export async function renderPqrDetail(containerEl, pqrId) {
     }
 
     containerEl.innerHTML = buildDetailHTML(pqr);
+
+    const tematicasContainer = document.getElementById('tematicas-container');
+    if (tematicasContainer) setupTematicasEditor(tematicasContainer);
 
     // Cargar borrador inteligente dinámicamente
     let draftData = null;
