@@ -1,5 +1,10 @@
+import pytest
+
 from src.application.dtos.pqrsd_assist_dtos import SummarizePQRSDInput
-from src.application.use_cases.summarize_pqrsd import SummarizePQRSD
+from src.application.use_cases.summarize_pqrsd import (
+    SummarizePQRSD,
+    SummaryGenerationError,
+)
 
 
 class StubGen:
@@ -72,15 +77,20 @@ def test_empty_content_returns_safe_default_without_calling_llm():
     assert out.original == ""
 
 
-def test_unparseable_reply_falls_back_to_safe_default_but_preserves_original():
+def test_unparseable_reply_raises_generation_error():
     gen = StubGen(reply="Lo siento, no puedo hacer eso.")
     uc = SummarizePQRSD(generation=gen)
 
-    out = uc.execute(SummarizePQRSDInput(content="Texto real de la PQR."))
+    with pytest.raises(SummaryGenerationError):
+        uc.execute(SummarizePQRSDInput(content="Texto real de la PQR."))
 
-    assert "No fue posible" in out.lead
-    assert out.topics == []
-    assert out.original == "Texto real de la PQR."
+
+def test_empty_llm_reply_raises_generation_error():
+    gen = StubGen(reply="")
+    uc = SummarizePQRSD(generation=gen)
+
+    with pytest.raises(SummaryGenerationError):
+        uc.execute(SummarizePQRSDInput(content="Texto real de la PQR."))
 
 
 def test_preserves_original_verbatim_as_layer_3():

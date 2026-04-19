@@ -14,19 +14,30 @@ _SYSTEM_PROMPT = (
     "asesor jurídico tome una decisión rápida.\n\n"
     "Responde ÚNICAMENTE con un objeto JSON válido y sin texto adicional, con esta forma:\n"
     "{\n"
-    "  \"lead\": \"<una sola oración en español que diga concretamente qué está pidiendo el ciudadano>\",\n"
+    "  \"lead\": \"<una sola oración en español que diga concretamente qué está pidiendo "
+    "o reportando el ciudadano>\",\n"
     "  \"topics\": [\"<tema breve>\", \"<tema breve>\", ...]\n"
     "}\n\n"
     "Reglas:\n"
-    "- La oración de \"lead\" debe ser factual, en voz activa, máximo 30 palabras, sin juicios.\n"
-    "- \"topics\" es una lista de 2 a 6 temas cortos (máximo 6 palabras cada uno) que identifican "
-    "los ejes temáticos distintos que toca el texto (ej. \"pago indebido\", \"tiempos de respuesta\", "
-    "\"infraestructura vial\").\n"
+    "- La oración de \"lead\" debe ser factual, en voz activa, máximo 30 palabras, sin juicios. "
+    "Siempre produce una oración útil, incluso si el texto original es breve o informal — "
+    "reformúlalo en un español claro y formal, sin añadir hechos inventados.\n"
+    "- \"topics\" es una lista de 1 a 6 temas cortos (máximo 6 palabras cada uno) que identifican "
+    "los ejes temáticos distintos que toca el texto (ej. \"pago indebido\", \"infraestructura vial\", "
+    "\"accidente vial\").\n"
     "- No inventes hechos, montos, leyes ni fechas que no aparezcan en el texto.\n"
-    "- No incluyas datos personales del ciudadano en lead o topics.\n"
-    "- Si el texto es muy corto o no se entiende, devuelve un JSON con lead=\"No fue posible "
-    "identificar una solicitud concreta en el texto.\" y topics=[]."
+    "- No incluyas datos personales del ciudadano (nombres, cédulas, teléfonos, direcciones "
+    "exactas) en lead o topics; si el texto menciona una calle o barrio, puedes referirte a "
+    "\"una vía\" o \"un sector de la ciudad\" a nivel general.\n"
+    "- Solo usa el JSON de respaldo {\"lead\":\"No fue posible identificar una solicitud "
+    "concreta en el texto.\",\"topics\":[]} cuando el texto esté vacío, sea ilegible o no "
+    "contenga ningún contenido interpretable como PQRSD."
 )
+
+
+class SummaryGenerationError(RuntimeError):
+    """The LLM could not produce a usable summary (distinct from an empty input,
+    which returns a safe default without raising)."""
 
 
 class SummarizePQRSD:
@@ -50,12 +61,24 @@ class SummarizePQRSD:
             max_tokens=self._max_tokens,
         ).strip()
 
+        # Distinguish three failure modes:
+        # 1) LLM returned nothing (429, safety block, or API error swallowed by the
+        #    adapter). Raise so the HTTP layer surfaces a 502 instead of masking
+        #    this as an "unparseable" PQRSD.
+        # 2) LLM returned text but we cannot extract a JSON object. Probably a
+        #    malformed reply — same treatment: raise.
+        # 3) LLM returned a parseable JSON. Use it.
+        if not raw:
+            raise SummaryGenerationError(
+                "El modelo no devolvió respuesta (probable error del proveedor "
+                "o cuota agotada). Intenta de nuevo más tarde."
+            )
+
         parsed = _parse_json_object(raw)
         if parsed is None:
-            return SummarizePQRSDOutput(
-                lead="No fue posible identificar una solicitud concreta en el texto.",
-                topics=[],
-                original=original,
+            raise SummaryGenerationError(
+                "El modelo devolvió una respuesta que no pudo interpretarse. "
+                "Intenta de nuevo."
             )
 
         lead = str(parsed.get("lead", "")).strip() or (

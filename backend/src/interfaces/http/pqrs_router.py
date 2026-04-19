@@ -343,8 +343,11 @@ def update_curated_pqr(
     pqr = container.curated_data_lake.get_by_radicado(radicado)
     if not pqr:
         raise HTTPException(status_code=404, detail=f"PQRSD {radicado} no encontrada.")
-    pqr.update(updates)
-    container.curated_data_lake.update_by_radicado(radicado, pqr)
+    if pqr.get("organization_id", 1) != current_user.organization_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para modificar esta PQR.")
+    merged = container.curated_data_lake.update_by_radicado(radicado, updates)
+    if merged is None:
+        raise HTTPException(status_code=404, detail=f"PQRSD {radicado} no encontrada al actualizar.")
     return {"success": True, "radicado": radicado}
 
 
@@ -408,3 +411,151 @@ def post_pqrs_clusters(records: list[dict] = Body(...)) -> ClusterResponse:
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── F5: AI-assisted summary + RAG-based draft response ─────────────────────
+#
+# Both endpoints require an authenticated agent. They read the curated PQR by
+# radicado, run the LLM, persist the output back onto the record (via
+# update_by_radicado) so the detail page can show it without re-running the
+# model on every refresh, and return the fresh record.
+
+from fastapi import status as http_status
+from src.application.dtos.pqrsd_assist_dtos import (
+    DraftResponseInput,
+    SummarizePQRSDInput,
+)
+
+
+def _pick_pqr_text(pqr: dict) -> str:
+    """Curated records use `contenido` from the ingest endpoint and
+    `descripcion_detallada` from the seed script. Accept either."""
+    return (
+        pqr.get("contenido")
+        or pqr.get("descripcion_detallada")
+        or ""
+    )
+
+
+def _citizen_display_name(pqr: dict) -> str | None:
+    ciudadano = pqr.get("ciudadano") or {}
+    if pqr.get("anonima"):
+        return None
+    nombres = (ciudadano.get("nombres") or "").strip()
+    apellidos = (ciudadano.get("apellidos") or "").strip()
+    full = f"{nombres} {apellidos}".strip()
+    return full or None
+
+
+def _map_llm_error(exc: Exception) -> HTTPException:
+    msg = str(exc)
+    if "RESOURCE_EXHAUSTED" in msg or "429" in msg:
+        return HTTPException(
+            status_code=429,
+            detail="Cuota del proveedor de IA agotada. Intenta de nuevo en unos minutos.",
+        )
+    return HTTPException(status_code=502, detail=f"Error del proveedor de IA: {exc}")
+
+
+@router.post("/curated/{radicado}/summarize")
+def summarize_curated_pqr(
+    radicado: str,
+    force: bool = False,
+    current_user: User = Depends(get_current_user),
+):
+    """F5 — Generate the 3-layer summary and persist it under `resumen_ia`."""
+    if container.summarize_pqrsd is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="El resumen IA no está configurado (falta GEMINI_API_KEY).",
+        )
+
+    pqr = container.curated_data_lake.get_by_radicado(radicado)
+    if not pqr:
+        raise HTTPException(status_code=404, detail=f"PQRSD {radicado} no encontrada.")
+    if pqr.get("organization_id", 1) != current_user.organization_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta PQR.")
+
+    if not force and pqr.get("resumen_ia"):
+        return {"radicado": radicado, "resumen_ia": pqr["resumen_ia"], "cached": True}
+
+    content = _pick_pqr_text(pqr)
+    if not content.strip():
+        raise HTTPException(status_code=422, detail="La PQR no tiene texto para resumir.")
+
+    try:
+        out = container.summarize_pqrsd.execute(SummarizePQRSDInput(content=content))
+    except Exception as exc:
+        raise _map_llm_error(exc)
+
+    resumen_ia = {
+        "lead": out.lead,
+        "topics": out.topics,
+        "original": out.original,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    container.curated_data_lake.update_by_radicado(radicado, {"resumen_ia": resumen_ia})
+    return {"radicado": radicado, "resumen_ia": resumen_ia, "cached": False}
+
+
+@router.post("/curated/{radicado}/draft-response")
+def draft_curated_pqr_response(
+    radicado: str,
+    force: bool = False,
+    current_user: User = Depends(get_current_user),
+):
+    """F5 — Generate a RAG-grounded draft response and persist it under `borrador_respuesta`."""
+    if container.draft_response_pqrsd is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="El borrador IA no está configurado (falta GEMINI_API_KEY).",
+        )
+
+    pqr = container.curated_data_lake.get_by_radicado(radicado)
+    if not pqr:
+        raise HTTPException(status_code=404, detail=f"PQRSD {radicado} no encontrada.")
+    if pqr.get("organization_id", 1) != current_user.organization_id:
+        raise HTTPException(status_code=403, detail="No tienes permiso para ver esta PQR.")
+
+    if not force and pqr.get("borrador_respuesta"):
+        return {
+            "radicado": radicado,
+            "borrador_respuesta": pqr["borrador_respuesta"],
+            "cached": True,
+        }
+
+    content = _pick_pqr_text(pqr)
+    if not content.strip():
+        raise HTTPException(status_code=422, detail="La PQR no tiene texto para borrador.")
+
+    try:
+        out = container.draft_response_pqrsd.execute(
+            DraftResponseInput(
+                content=content,
+                asunto=pqr.get("asunto_principal") or pqr.get("tipo"),
+                citizen_name=_citizen_display_name(pqr),
+            )
+        )
+    except Exception as exc:
+        raise _map_llm_error(exc)
+
+    if out.used_fallback or not out.draft.strip():
+        raise HTTPException(
+            status_code=502,
+            detail="El modelo no pudo generar un borrador. Intenta de nuevo en unos segundos.",
+        )
+
+    borrador_respuesta = {
+        "draft": out.draft,
+        "sources": [{"title": s.title, "excerpt": s.excerpt} for s in out.sources],
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "aprobado": False,
+    }
+    container.curated_data_lake.update_by_radicado(
+        radicado, {"borrador_respuesta": borrador_respuesta}
+    )
+    return {
+        "radicado": radicado,
+        "borrador_respuesta": borrador_respuesta,
+        "cached": False,
+    }

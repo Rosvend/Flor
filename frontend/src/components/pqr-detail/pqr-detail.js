@@ -65,18 +65,37 @@ function buildDetailHTML(pqr) {
     // The raw citizen text can live under either field depending on ingest path.
     const originalText = pqr.contenido || pqr.descripcion_detallada || '';
 
-    // F5 summary takes precedence over the older classification `analisis_ia` for the
-    // first two layers; we fall back to the older fields so existing records still render.
+    // Capa 1/2/3 keep their original semantics: they are populated by the older
+    // classification pipeline (analisis_ia). The F5 summary is rendered as its
+    // own separate card below — it does NOT overwrite these.
     const capas = {
         solicitudConcreta: analisis.texto_mejorado || 'Pendiente de análisis...',
-        tematicas: analisis.tipo_sugerido ? [analisis.tipo_sugerido, analisis.secretaria_asignada] : ['General'],
-        textoOriginal: pqr.contenido || pqr.descripcion_detallada
+        tematicas: analisis.tipo_sugerido
+            ? [analisis.tipo_sugerido, analisis.secretaria_asignada].filter(Boolean)
+            : ['General'],
+        textoOriginal: originalText || '(sin texto)'
     };
 
     const tematicasHTML = capas.tematicas
         .filter(t => t)
         .map(t => `<span class="pqr-tematica-tag">${t}</span>`)
         .join('');
+
+    // F5 — separate "Resumen generado por IA" card, hidden until summary exists.
+    const resumenTopicsHTML = (resumenIA?.topics || [])
+        .map(t => `<span class="pqr-tematica-tag pqr-tematica-tag--resumen">${escapeTextarea(t)}</span>`)
+        .join('');
+    const resumenCardHTML = `
+        <div class="pqr-capa-card pqr-capa-card--resumen" id="pqr-resumen-card" ${resumenIA ? '' : 'hidden'}>
+            <div class="pqr-capa-card__label">
+                <span class="pqr-capa-card__label-num pqr-capa-card__label-num--resumen">IA</span>
+                Resumen generado por IA
+            </div>
+            <p class="pqr-capa-card__texto" id="pqr-resumen-lead">${resumenIA ? escapeTextarea(resumenIA.lead) : ''}</p>
+            <div class="pqr-resumen-topics" id="pqr-resumen-topics">${resumenTopicsHTML}</div>
+            <p class="pqr-resumen-meta" id="pqr-resumen-meta">${resumenIA?.generated_at ? `Generado ${formatFecha(resumenIA.generated_at)}` : ''}</p>
+        </div>
+    `;
 
     // Precedente y Ciudadano (Mocks para el MVP si no hay en el backend)
     const precedenteHTML = `
@@ -169,6 +188,9 @@ function buildDetailHTML(pqr) {
                     </div>
                     <blockquote class="pqr-texto-original">${capas.textoOriginal}</blockquote>
                 </div>
+
+                <!-- F5 — Resumen IA (separate card; no overlap with Capa 1/2) -->
+                ${resumenCardHTML}
 
             </div>
 
@@ -382,7 +404,7 @@ export async function renderPqrDetail(containerEl, pqrId) {
         }
     });
 
-    // F5 — Generar resumen (capas 1 y 2)
+    // F5 — Generar resumen (nueva tarjeta independiente, no sobrescribe Capa 1/2)
     document.getElementById('btn-generar-resumen')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-generar-resumen');
         const force = Boolean(pqr.resumen_ia);
@@ -394,21 +416,27 @@ export async function renderPqrDetail(containerEl, pqrId) {
             const resumen = res?.resumen_ia;
             if (!resumen) throw new Error('Respuesta sin resumen');
 
-            // Update in-memory model and re-render the two layer cards.
             pqr.resumen_ia = resumen;
-            const leadEl = document.querySelector('.pqr-capa-card:nth-of-type(1) .pqr-capa-card__texto');
+
+            // Populate the dedicated F5 card, leaving Capa 1/2 untouched.
+            const card = document.getElementById('pqr-resumen-card');
+            const leadEl = document.getElementById('pqr-resumen-lead');
+            const topicsEl = document.getElementById('pqr-resumen-topics');
+            const metaEl = document.getElementById('pqr-resumen-meta');
             if (leadEl) leadEl.textContent = resumen.lead || '';
-            const tematicasEl = document.getElementById('tematicas-container');
-            if (tematicasEl) {
-                const addBtn = tematicasEl.querySelector('.pqr-tematica-add');
-                tematicasEl.querySelectorAll('.pqr-tematica-tag').forEach(t => t.remove());
-                (resumen.topics || []).forEach(t => {
+            if (topicsEl) {
+                topicsEl.innerHTML = (resumen.topics || []).map(t => {
                     const span = document.createElement('span');
-                    span.className = 'pqr-tematica-tag';
+                    span.className = 'pqr-tematica-tag pqr-tematica-tag--resumen';
                     span.textContent = t;
-                    tematicasEl.insertBefore(span, addBtn);
-                });
+                    return span.outerHTML;
+                }).join('');
             }
+            if (metaEl) metaEl.textContent = resumen.generated_at
+                ? `Generado ${formatFecha(resumen.generated_at)}`
+                : '';
+            if (card) card.hidden = false;
+
             showToast(res.cached ? 'Resumen ya existente' : '✓ Resumen generado', 'success');
             btn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 12h14"/></svg>
