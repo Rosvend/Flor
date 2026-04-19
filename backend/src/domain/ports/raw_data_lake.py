@@ -13,3 +13,6 @@ class RawDataLakePort(ABC):
     @abstractmethod
     def delete(self, key: str) -> None:
         """Deletes a raw record by its storage key."""
+    @abstractmethod
+    def store_binary(self, content: bytes, filename: str) -> str:
+        """Persists a binary file and returns its storage key/URL."""

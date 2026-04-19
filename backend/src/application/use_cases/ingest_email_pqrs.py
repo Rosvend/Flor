@@ -41,8 +41,11 @@ class IngestEmailPQRS:
                 self._connector.mark_as_read(email['id'])
                 continue
 
-            # 3. Procesar con IA (Toxicidad, Sentimiento, Pre-Clasificación)
-            ai_result = self._process_pqrs.execute(ProcessPQRSInput(text=text_to_analyze))
+            # 3. Procesar con IA (Toxicidad, Sentimiento, Pre-Clasificación, Visión)
+            ai_result = self._process_pqrs.execute(ProcessPQRSInput(
+                text=text_to_analyze,
+                images=email.get('images', [])
+            ))
             
             # Generar un radicado automático para el registro curado
             import uuid
@@ -95,6 +98,7 @@ class IngestEmailPQRS:
                     "tipo_sugerido":      ai_result.tipo_sugerido,
                     "secretaria_asignada": ai_result.secretaria_asignada,
                     "texto_mejorado":     ai_result.improved_text,
+                    "objetos_detectados": ai_result.detected_objects,
                 },
                 # Pipeline fields — initially empty
                 "resumen_ia":           None,

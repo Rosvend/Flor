@@ -65,7 +65,7 @@ function renderItem(pqr, isActive) {
     // Backward compat: read from either new (contenido) or legacy (descripcion_detallada)
     const contenidoStr = pqr.contenido || pqr.descripcion_detallada || 'Sin contenido detallado';
     const asunto = pqr.analisis_ia?.texto_mejorado || contenidoStr.substring(0, 60) + '...';
-    const confianza = pqr.analisis_ia ? 99 : 0; // Placeholder confianza
+    const confianza = pqr.analisis_ia ? 100 : 0;
 
     return `
         <div

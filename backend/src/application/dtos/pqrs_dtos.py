@@ -1,10 +1,11 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List
 
 
 @dataclass
 class ProcessPQRSInput:
     text: str
+    images: List[bytes] = field(default_factory=list)
 
 
 @dataclass
@@ -14,12 +15,13 @@ class ProcessPQRSOutput:
     sentiment: str
     is_offensive: bool
     toxicity_warning: Optional[str]
-    offensive_words: list[str] = field(default_factory=list)
+    offensive_words: List[str] = field(default_factory=list)
     tipo_sugerido: Optional[str] = None
     secretaria_asignada: Optional[str] = None
     subsecretaria_sugerida: Optional[str] = None
     prioridad: Optional[str] = None
     confidence_score: Optional[float] = None
+    detected_objects: List[str] = field(default_factory=list)
 
 
 @dataclass

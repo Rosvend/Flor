@@ -1,7 +1,7 @@
 import logging
 import os
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -39,25 +39,58 @@ async def ingest_gmail_pqrs(query: str = "is:unread", current_user: User = Depen
 
 # ── Background Task: AI Analysis ────────────────────────────────────────────
 
-def _analyze_pqr_background(keys: list[str], records: list[dict]) -> None:
+def _analyze_pqr_background(radicado: str, record: dict, images_data: list[tuple[bytes, str, str]] = None) -> None:
+    """
+    Tarea asíncrona:
+    1. Sube imágenes a S3/DataLake y obtiene las claves.
+    2. Ejecuta análisis de IA (Texto + YOLO).
+    3. Actualiza el registro curado.
+    """
     try:
         process_pqrs = container.get_process_pqrs()
-        for record in records:
-            texto = get_contenido(record)
-            if len(texto) > 5:
-                analisis = process_pqrs.execute(ProcessPQRSInput(text=texto))
-                record["analisis_ia"] = {
-                    "sentimiento":        analisis.sentiment,
-                    "is_offensive":       analisis.is_offensive,
-                    "toxicity_warning":   analisis.toxicity_warning,
-                    "offensive_words":    analisis.offensive_words,
-                    "tipo_sugerido":      analisis.tipo_sugerido,
-                    "secretaria_asignada": analisis.secretaria_asignada,
-                    "texto_mejorado":     analisis.improved_text,
-                }
-                container.curated_data_lake.update_by_radicado(record["radicado"], record)
+        anexos_keys = []
+        images_for_yolo = []
+        
+        # 1. Procesar y Subir imágenes
+        if images_data:
+            for content, filename, content_type in images_data:
+                try:
+                    # Almacenamiento real en bucket (asíncrono respecto al usuario)
+                    key = container.raw_data_lake.store_binary(content, filename)
+                    anexos_keys.append(key)
+                    
+                    if content_type.startswith("image/"):
+                        images_for_yolo.append(content)
+                except Exception as e:
+                    logger.error(f"Error subiendo anexo {filename} en background: {e}")
+
+        # 2. Análisis de IA
+        texto = get_contenido(record)
+        analisis_ia = None
+        
+        if len(texto) > 5 or images_for_yolo:
+            analisis = process_pqrs.execute(ProcessPQRSInput(text=texto, images=images_for_yolo))
+            analisis_ia = {
+                "sentimiento":        analisis.sentiment,
+                "is_offensive":       analisis.is_offensive,
+                "toxicity_warning":   analisis.toxicity_warning,
+                "offensive_words":    analisis.offensive_words,
+                "tipo_sugerido":      analisis.tipo_sugerido,
+                "secretaria_asignada": analisis.secretaria_asignada,
+                "texto_mejorado":     analisis.improved_text,
+                "objetos_detectados": analisis.detected_objects,
+            }
+
+        # 3. Actualización final del registro
+        updates = {}
+        if anexos_keys: updates["anexos"] = anexos_keys
+        if analisis_ia: updates["analisis_ia"] = analisis_ia
+        
+        if updates:
+            container.curated_data_lake.update_by_radicado(radicado, updates)
+            
     except Exception as exc:
-        logger.error("Error en análisis IA background: %s", exc)
+        logger.error("Error en procesamiento background completo: %s", exc)
 
 
 def _notify_created(record: dict) -> None:
@@ -101,6 +134,7 @@ async def submit_pqrs(
     archivo_3: Optional[UploadFile] = File(None),
     archivo_4: Optional[UploadFile] = File(None),
     archivo_5: Optional[UploadFile] = File(None),
+    images: Optional[List[UploadFile]] = File(None),
     # Toggle de anexos
     tiene_anexos: Optional[str] = Form("No"),
     is_anonimo: Optional[str] = Form(None),
@@ -169,7 +203,22 @@ async def submit_pqrs(
         "respuesta":            None,
         "timestamp_respuesta":  None,
         "respondido_por":       None,
+        "anexos":               [],
     }
+
+    # ── Collect raw bytes for Background Processing ──────────────────────
+    images_data = []
+    all_files = [archivo_1, archivo_2, archivo_3, archivo_4, archivo_5]
+    if images:
+        all_files.extend(images)
+    
+    for arch in all_files:
+        if arch and arch.filename:
+            try:
+                content = await arch.read()
+                images_data.append((content, arch.filename, arch.content_type))
+            except Exception as e:
+                logger.warning(f"Error leyendo anexo {arch.filename}: {e}")
 
     try:
         result = container.ingest_curated_messages.execute(
@@ -178,7 +227,7 @@ async def submit_pqrs(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Error al almacenar la PQRS: {exc}")
 
-    background_tasks.add_task(_analyze_pqr_background, result.stored_keys, [curated_record])
+    background_tasks.add_task(_analyze_pqr_background, radicado, curated_record, images_data)
     background_tasks.add_task(_notify_created, curated_record)
 
     return {"radicado": radicado, "message": "Su PQRS ha sido radicada exitosamente."}
@@ -201,6 +250,7 @@ class AnalyzeResponse(BaseModel):
     offensive_words: list[str]
     tipo_sugerido: Optional[str] = None
     secretaria_asignada: Optional[str] = None
+    detected_objects: list[str] = []
 
 
 class ClusterItemResponse(BaseModel):
@@ -248,6 +298,7 @@ def analyze_pqrs(request: AnalyzeRequest) -> AnalyzeResponse:
             offensive_words=result.offensive_words,
             tipo_sugerido=result.tipo_sugerido,
             secretaria_asignada=result.secretaria_asignada,
+            detected_objects=result.detected_objects,
         )
 
     except Exception as e:

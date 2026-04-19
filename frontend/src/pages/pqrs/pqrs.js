@@ -381,6 +381,7 @@ function setupFormLogic() {
 
         try {
             const formData = new FormData(form);
+            
             // Asegurar que el estado del toggle vaya
             formData.set('es_anonimo', toggleAnonimo.checked ? 'true' : 'false');
             

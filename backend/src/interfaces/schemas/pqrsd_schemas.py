@@ -71,6 +71,7 @@ class AnalisisIA(BaseModel):
     tipo_sugerido:    str | None = None
     secretaria_asignada: str | None = None
     texto_mejorado:   str | None = None
+    objetos_detectados: list[str] = Field(default_factory=list)
 
 
 # ── Ciudadano (legacy, kept for backward compat reads) ────────────────────────

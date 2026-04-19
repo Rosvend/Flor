@@ -4,11 +4,12 @@ from src.domain.ports.pqrs_analyzer_port import (
     TextCorrectorPort,
 )
 from src.domain.ports.classification_port import ClassificationPort
+from src.domain.ports.vision_port import VisionAnalyzerPort
 from src.application.dtos.pqrs_dtos import ProcessPQRSInput, ProcessPQRSOutput
 
 
 class ProcessPQRS:
-    """Orquesta el flujo: Toxicidad → Sentimiento → Corrección → Pre-Clasificación (F2)."""
+    """Orquesta el flujo: Visión → Toxicidad → Sentimiento → Corrección → Pre-Clasificación (F2)."""
 
     def __init__(
         self,
@@ -16,13 +17,25 @@ class ProcessPQRS:
         sentiment_analyzer: SentimentAnalyzerPort,
         text_corrector: TextCorrectorPort,
         pre_classifier: ClassificationPort = None,
+        vision_analyzer: VisionAnalyzerPort = None,
     ) -> None:
         self._toxicity = toxicity_detector
         self._sentiment = sentiment_analyzer
         self._corrector = text_corrector
         self._pre_classifier = pre_classifier
+        self._vision = vision_analyzer
 
     def execute(self, input_dto: ProcessPQRSInput) -> ProcessPQRSOutput:
+        # 0. Analizar imágenes (si existen)
+        detected_objects = []
+        if self._vision and input_dto.images:
+            for img_bytes in input_dto.images:
+                results = self._vision.analyze(img_bytes)
+                # Extraer solo las etiquetas únicas de los objetos detectados
+                labels = list(set([r["label"] for r in results]))
+                detected_objects.extend(labels)
+            detected_objects = list(set(detected_objects)) # Únicos entre todas las imágenes
+
         # 1. Detectar groserías
         toxicity = self._toxicity.analyze(input_dto.text)
 
@@ -68,4 +81,5 @@ class ProcessPQRS:
             subsecretaria_sugerida=subsecretaria,
             prioridad=prioridad,
             confidence_score=confidence,
+            detected_objects=detected_objects,
         )

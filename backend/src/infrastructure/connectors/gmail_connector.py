@@ -61,25 +61,46 @@ class GmailConnector(EmailConnectorPort):
                 subject = next((h['value'] for h in headers if h['name'].lower() == 'subject'), "Sin Asunto")
                 sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), "Desconocido")
                 
-                # Extraer Cuerpo (Body)
+                # Extraer Cuerpo (Body) y Adjuntos
                 parts = msg_data.get('payload', {}).get('parts', [])
                 body = ""
+                images = []
                 
+                def process_parts(parts_list):
+                    nonlocal body
+                    for p in parts_list:
+                        mime_type = p.get('mimeType', '')
+                        # Texto
+                        if mime_type == 'text/plain' and not body:
+                            data = p.get('body', {}).get('data', '')
+                            if data:
+                                body = base64.urlsafe_b64decode(data).decode('utf-8')
+                        # Imágenes
+                        elif mime_type.startswith('image/'):
+                            att_id = p.get('body', {}).get('attachmentId')
+                            if att_id:
+                                att = self.service.users().messages().attachments().get(
+                                    userId='me', messageId=msg['id'], id=att_id
+                                ).execute()
+                                img_data = base64.urlsafe_b64decode(att['data'])
+                                images.append(img_data)
+                        # Recursión para multipart/alternative o similares
+                        if 'parts' in p:
+                            process_parts(p['parts'])
+
                 if not parts: # Mensaje simple
                     body_data = msg_data.get('payload', {}).get('body', {}).get('data', '')
-                else: # Mensaje multipart
-                    # Buscamos la parte text/plain
-                    body_part = next((p for p in parts if p['mimeType'] == 'text/plain'), parts[0])
-                    body_data = body_part.get('body', {}).get('data', '')
-
-                if body_data:
-                    body = base64.urlsafe_b64decode(body_data).decode('utf-8')
+                    if body_data:
+                        body = base64.urlsafe_b64decode(body_data).decode('utf-8')
+                else:
+                    process_parts(parts)
 
                 parsed_messages.append({
                     "id": msg['id'],
                     "sender": sender,
                     "subject": subject,
                     "body": body,
+                    "images": images,
                     "timestamp": msg_data.get('internalDate')
                 })
             
