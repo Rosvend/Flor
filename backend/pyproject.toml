@@ -1,0 +1,46 @@
+[project]
+name = "flor-backend"
+version = "0.1.0"
+description = "PQRSD optimization system for Alcaldía de Medellín (OmegaHack 2026)."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.12",
+    "uvicorn[standard]==0.34.0",
+    "pydantic==2.11.3",
+    "httpx==0.28.1",
+    "python-dotenv==1.1.0",
+
+    # Auth
+    "bcrypt>=4.3.0",
+    "python-jose[cryptography]==3.3.0",
+
+    # Knowledge base / RAG
+    "pymupdf4llm==0.0.17",
+    "ocrmypdf==16.10.2",
+    "pikepdf<10",                # ocrmypdf 16.10.2 uses pdf.check(), removed in pikepdf 10
+    "langchain-text-splitters==0.3.8",
+    "chromadb==0.5.23",
+    "sentence-transformers==3.3.1",
+
+    # Datalake (S3 raw storage)
+    "boto3==1.38.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

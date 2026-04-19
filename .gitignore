@@ -206,5 +206,6 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-#ChromaDB
+# Knowledge base — Chroma index is a build artifact
+backend/.knowledge_base/
 .chroma/
