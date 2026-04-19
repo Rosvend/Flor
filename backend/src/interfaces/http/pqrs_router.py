@@ -428,6 +428,18 @@ def get_pqrs_stats(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/dashboard/map")
+def get_dashboard_map(current_user: User = Depends(get_current_user)):
+    """Devuelve los datos de densidad por comuna generados por IA."""
+    try:
+        use_case = container.get_analyze_map_density()
+        return use_case.execute(current_user.organization_id)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error generando mapa de comunas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.patch("/curated/{radicado}")
 def update_curated_pqr(
     radicado: str,

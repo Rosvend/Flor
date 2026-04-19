@@ -1,0 +1,120 @@
+.map-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background-color: var(--color-surface);
+    overflow: hidden;
+}
+
+.map-view__header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--color-surface);
+}
+
+.map-view__title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.map-view__subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+.map-view__container {
+    flex: 1;
+    position: relative;
+    width: 100%;
+}
+
+#leaflet-map {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Custom Popup styles */
+.leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    background-color: var(--color-surface);
+    color: var(--color-text-primary);
+}
+
+.leaflet-popup-tip {
+    background-color: var(--color-surface);
+}
+
+.comuna-popup {
+    padding: 0.5rem;
+}
+
+.comuna-popup h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 0.5rem;
+}
+
+.comuna-popup p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.comuna-popup .density-badge {
+    display: inline-block;
+    background-color: var(--color-primary-light);
+    color: var(--color-primary);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.comuna-popup .insight {
+    font-style: italic;
+    color: var(--color-text-secondary);
+    background-color: var(--color-background);
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid var(--color-primary);
+}
+
+.map-view__loading {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.map-view__spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

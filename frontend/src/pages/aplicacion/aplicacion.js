@@ -4,6 +4,7 @@ import { renderPqrsSidebar } from '../../components/pqrs-sidebar/pqrs-sidebar.js
 import { renderPqrDetail } from '../../components/pqr-detail/pqr-detail.js';
 import { renderStatsView } from '../../components/stats-view/stats-view.js';
 import { renderSettingsView } from '../../components/settings-view/settings-view.js';
+import { renderMapView } from '../../components/map-view/map-view.js';
 import { router } from '../../app/router.js';
 import { getDashboardData } from '../../service/api.js';
 import { storage } from '../../service/storage.js';
@@ -151,6 +152,8 @@ export function renderAplicacion() {
         // Renderizar área principal
         if (pqrId === 'estadisticas') {
             renderStatsView(mainArea);
+        } else if (pqrId === 'mapa') {
+            renderMapView(mainArea);
         } else if (pqrId === 'configuracion') {
             renderSettingsView(mainArea);
         } else if (pqrId) {
@@ -169,6 +172,8 @@ export function renderAplicacion() {
     // ── Renderizar área principal ─────────────────────────────────
     if (activePqrId === 'estadisticas') {
         renderStatsView(mainArea);
+    } else if (activePqrId === 'mapa') {
+        renderMapView(mainArea);
     } else if (activePqrId === 'configuracion') {
         renderSettingsView(mainArea);
     } else if (activePqrId) {

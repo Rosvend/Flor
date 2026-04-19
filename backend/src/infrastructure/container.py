@@ -163,6 +163,21 @@ def get_draft_intelligent_response():
         similarity_analyzer=similarity_analyzer,
     )
 
+# Singleton para el mapa (así la caché funciona entre peticiones)
+_analyze_map_density_instance = None
+
+def get_analyze_map_density():
+    global _analyze_map_density_instance
+    if _analyze_map_density_instance is None:
+        from src.application.use_cases.analyze_map_density import AnalyzeMapDensity
+        from src.infrastructure.classification.gemini_generation_adapter import GeminiGenerationAdapter
+        _analyze_map_density_instance = AnalyzeMapDensity(
+            curated_data_lake=curated_data_lake,
+            generation=GeminiGenerationAdapter(),
+            cache_ttl=86400  # 1 día de caché
+        )
+    return _analyze_map_density_instance
+
 
 cluster_pqrs = ClusterPQRS(
     similarity_analyzer=similarity_analyzer,
