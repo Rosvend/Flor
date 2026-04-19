@@ -11,11 +11,20 @@ from src.infrastructure import container
 router = APIRouter(prefix="/ingest", tags=["ingest"])
 
 
-class CuratedUsuario(BaseModel):
-    nombre: str | None = None
-    id_meta: str | None = None
-    documento: str | None = None
+class CuratedCiudadano(BaseModel):
+    tipo_persona: str                    # natural | juridica
+    tipo_documento: str                  # cedula_ciudadania | cedula_extranjeria | tarjeta_identidad | pasaporte | nit
+    numero_documento: str
+    nombres: str
+    apellidos: str
+    genero: str                          # masculino | femenino | no_binario | prefiero_no_decirlo | otro
+    pais: str = "Colombia"
+    departamento: str
+    ciudad: str
+    direccion: str | None = None
+    correo_electronico: str | None = None
     telefono: str | None = None
+    id_meta: str | None = None           # presente si viene de canal Meta
 
 
 class CuratedMetadata(BaseModel):
@@ -24,16 +33,17 @@ class CuratedMetadata(BaseModel):
 
 
 class CuratedRecord(BaseModel):
-    id: int | None = None
     radicado: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp_radicacion: str = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
-    tipo: str
     canal: str
     anonima: bool
-    usuario: CuratedUsuario
-    contenido: str
+    ciudadano: CuratedCiudadano
+    asunto_principal: str                # peticion | queja | reclamo | solicitud | denuncia
+    atencion_preferencial: str = "ninguna"  # ninguna | adulto_mayor | persona_con_discapacidad | mujer_embarazada | victima_conflicto | otro
+    autoriza_notificacion_correo: bool
+    descripcion_detallada: str
     metadata: CuratedMetadata = Field(default_factory=CuratedMetadata)
 
 
@@ -47,7 +57,7 @@ def analyze_and_update_records(keys: list[str], records: list[dict]):
     try:
         process_pqrs = container.get_process_pqrs()
         for key, record in zip(keys, records):
-            texto = record.get("contenido", "")
+            texto = record.get("descripcion_detallada", "")
             if len(texto) > 5:
                 analisis = process_pqrs.execute(ProcessPQRSInput(text=texto))
                 record["analisis_ia"] = {
