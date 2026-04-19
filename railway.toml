@@ -9,6 +9,7 @@ healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
-
-# Railway injects PORT; Dockerfile CMD already uses it.
-startCommand = "uvicorn main:app --host 0.0.0.0 --port ${PORT}"
+# Start command is intentionally omitted — the Dockerfile's CMD wraps uvicorn in
+# `sh -c`, which is required so Railway's injected ${PORT} env var is expanded.
+# Setting startCommand here overrides the CMD and runs without a shell, so
+# uvicorn would receive the literal string "${PORT}" and fail to boot.
