@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict, Any
 from datetime import datetime, timezone
 from src.domain.ports.email_connector_port import EmailConnectorPort
@@ -5,6 +6,8 @@ from src.application.use_cases.process_pqrs import ProcessPQRS
 from src.application.dtos.pqrs_dtos import ProcessPQRSInput
 from src.application.use_cases.ingest_curated_messages import IngestCuratedMessages
 from src.application.dtos.ingest_curated_dtos import IngestCuratedMessagesInput
+
+logger = logging.getLogger(__name__)
 
 class IngestEmailPQRS:
     """
@@ -28,24 +31,45 @@ class IngestEmailPQRS:
             return {"status": "success", "count": 0, "message": "No hay correos nuevos"}
 
         curated_records = []
-        
+        quota_hit = False
+
         for email in emails:
+            if quota_hit:
+                break
             # 2. Validar si es una PQRS (Filtro de Spam/Irrelevantes)
             text_to_analyze = f"Asunto: {email['subject']}\n\nCuerpo: {email['body']}"
-            
-            # Accedemos al pre_classifier a través de process_pqrs
-            is_valid = self._process_pqrs._pre_classifier.is_pqrs(text_to_analyze)
-            
+
+            try:
+                is_valid = self._process_pqrs._pre_classifier.is_pqrs(text_to_analyze)
+            except Exception as exc:
+                msg = str(exc)
+                if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+                    logger.warning("Gemini rate limit alcanzado, se reintentará el próximo tick: %s", email.get('id'))
+                    quota_hit = True
+                    break
+                logger.error("Error clasificando correo %s: %s", email.get('id'), exc)
+                continue
+
             if not is_valid:
                 # Si no es una PQRS, simplemente la marcamos como leída y saltamos
                 self._connector.mark_as_read(email['id'])
                 continue
 
             # 3. Procesar con IA (Toxicidad, Sentimiento, Pre-Clasificación, Visión)
-            ai_result = self._process_pqrs.execute(ProcessPQRSInput(
-                text=text_to_analyze,
-                images=email.get('images', [])
-            ))
+            try:
+                ai_result = self._process_pqrs.execute(ProcessPQRSInput(
+                    text=text_to_analyze,
+                    images=email.get('images', [])
+                ))
+            except Exception as exc:
+                msg = str(exc)
+                if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+                    logger.warning("Gemini rate limit al procesar %s, se reintentará", email.get('id'))
+                    quota_hit = True
+                    break
+                logger.error("Error procesando correo %s: %s", email.get('id'), exc)
+                continue
+
             
             # Generar un radicado automático para el registro curado
             import uuid

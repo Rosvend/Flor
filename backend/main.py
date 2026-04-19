@@ -49,6 +49,58 @@ app.include_router(migration_router, prefix="/api/v1")
 app.include_router(chatbot_router, prefix="/api/v1")
 
 
+# ── Scheduler: ingesta IMAP periódica ────────────────────────────────────────
+from apscheduler.schedulers.background import BackgroundScheduler
+
+_email_scheduler: BackgroundScheduler | None = None
+
+
+def _run_email_ingest() -> None:
+    try:
+        from src.infrastructure import container
+        result = container.get_ingest_email_pqrs().execute()
+        if result.get("count"):
+            logger.info(
+                "Ingesta IMAP: %s PQRS nuevas (%s)",
+                result["count"],
+                result.get("radicados"),
+            )
+    except Exception as exc:
+        logger.error("Error en ingesta IMAP programada: %s", exc)
+
+
+@app.on_event("startup")
+def _start_email_scheduler() -> None:
+    global _email_scheduler
+    if os.getenv("EMAIL_INGEST_ENABLED", "true").lower() in ("0", "false", "no"):
+        logger.info("Scheduler de ingesta IMAP desactivado (EMAIL_INGEST_ENABLED=false).")
+        return
+    interval_sec_env = os.getenv("EMAIL_INGEST_INTERVAL_SEC")
+    if interval_sec_env:
+        interval_sec = int(interval_sec_env)
+    else:
+        interval_sec = int(os.getenv("EMAIL_INGEST_INTERVAL_MIN", "5")) * 60
+    _email_scheduler = BackgroundScheduler(timezone="UTC")
+    _email_scheduler.add_job(
+        _run_email_ingest,
+        "interval",
+        seconds=interval_sec,
+        id="email_ingest",
+        max_instances=1,
+        coalesce=True,
+    )
+    _email_scheduler.start()
+    logger.info("Scheduler de ingesta IMAP activado cada %s s.", interval_sec)
+
+
+@app.on_event("shutdown")
+def _stop_email_scheduler() -> None:
+    global _email_scheduler
+    if _email_scheduler is not None:
+        _email_scheduler.shutdown(wait=False)
+        _email_scheduler = None
+
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "pqrs-backend"}
