@@ -1,7 +1,7 @@
-# Flor — PQRSmart
+# Flor
 
 PQRSD optimization system for the Alcaldía de Medellín (Secretaría de Desarrollo
-Económico). Submission for **OmegaHack 2026** — track *AI Agents & Automation*.
+Económico). Submission for **OmegaHack 2026**.
 
 Flor automates the non-discretionary parts of the PQRSD workflow (ingestion,
 pre-classification, synthesis, RAG-based draft responses) so officials spend
